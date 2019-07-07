@@ -26,9 +26,7 @@ var (
 )
 
 func (c *Client) uploadAd(ad *Ad) error {
-	log.WithFields(log.Fields{
-		"ad": ad,
-	}).Info("uploading ad...")
+	log.WithFields("ad", ad).Info("uploading ad...")
 
 	metaInfo, err := c.getAdMetaInfo(ad)
 	if err != nil {
@@ -39,9 +37,12 @@ func (c *Client) uploadAd(ad *Ad) error {
 }
 
 func (c *Client) removeAds(ids []string) error {
-	log.WithFields(log.Fields{
-		"ids": ids,
-	}).Info("removing ads...")
+	if len(ids) == 0 {
+		log.Info("no ads to remove")
+		return nil
+	}
+
+	log.WithField("ids", ids).Info("removing ads...")
 
 	values := url.Values{
 		"IDS": {
@@ -103,7 +104,7 @@ func (c *Client) allowRedirects(allow bool) {
 	}
 }
 
-func (c *Client) logIn(u *User) error {
+func (c *Client) login(u *User) error {
 	values := url.Values{
 		"username": {
 			u.Username,
@@ -143,7 +144,7 @@ func (c *Client) logIn(u *User) error {
 	defer res.Body.Close()
 
 	if res.StatusCode == http.StatusUnauthorized {
-		return fmt.Errorf("login failed for '%s' ('%s')", u.Username, u.Password)
+		return fmt.Errorf("login failed for '%s' ('%s')", u.Username)
 	}
 
 	return nil
@@ -178,9 +179,6 @@ func (c *Client) getAdIds() ([]string, error) {
 
 	r := regexp.MustCompile(`id="ad_(\d+)`)
 	matches := r.FindAllStringSubmatch(string(body), -1)
-	if matches == nil {
-		return nil, errors.New("no ads found")
-	}
 
 	ids := make([]string, len(matches))
 	for i, m := range matches {
