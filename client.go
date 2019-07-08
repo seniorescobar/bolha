@@ -1,6 +1,7 @@
 package client
 
 import (
+	"image"
 	"net/http"
 )
 
@@ -20,9 +21,15 @@ type User struct {
 type Ad struct {
 	Title       string
 	Description string
-	Price       string
-	CategoryId  string
-	Images      []string
+	Price       int
+	CategoryId  int
+	Images      []*image.Image
+}
+
+// ActiveAd represents an active (uploaded) ad from bolha.com
+type ActiveAd struct {
+	Id    int64
+	Order int
 }
 
 // CLIENT
@@ -51,44 +58,39 @@ func New(u *User) (*Client, error) {
 	return client, nil
 }
 
-// UPLOAD
-// UploadAd uploads a single ad
-func (c *Client) UploadAd(ad *Ad) error {
-	if err := c.uploadAd(ad); err != nil {
-		return err
-	}
-
-	return nil
+// GET
+// GetActiveAds returns active ads
+func (c *Client) GetActiveAds() ([]*ActiveAd, error) {
+	return c.getActiveAds()
 }
 
-// UploadAds uploads multiple ads
-func (c *Client) UploadAds(ads []*Ad) error {
-	for _, ad := range ads {
-		if err := c.UploadAd(ad); err != nil {
-			// TODO continue if err, throw it on a chan
-			return err
-		}
-	}
-
-	return nil
+// UPLOAD
+// UploadAd uploads a single ad
+func (c *Client) UploadAd(ad *Ad) (int64, error) {
+	return c.uploadAd(ad)
 }
 
 // REMOVE
 // RemoveAd removes a single ad provided by an id
-func (c *Client) RemoveAd(id string) error {
-	return c.removeAds([]string{id})
+func (c *Client) RemoveAd(id int64) error {
+	return c.removeAds([]int64{id})
 }
 
 // RemoveAds removes multiple ads provided by ids
-func (c *Client) RemoveAds(ids []string) error {
+func (c *Client) RemoveAds(ids []int64) error {
 	return c.removeAds(ids)
 }
 
 // RemoveAllAds removes all ads found on a user's account
 func (c *Client) RemoveAllAds() error {
-	ids, err := c.getAdIds()
+	activeAds, err := c.getActiveAds()
 	if err != nil {
 		return err
+	}
+
+	ids := make([]int64, len(activeAds))
+	for i := range activeAds {
+		ids[i] = activeAds[i].Id
 	}
 
 	return c.removeAds(ids)

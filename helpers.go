@@ -13,8 +13,8 @@ import (
 	"net/http/cookiejar"
 	"net/textproto"
 	"net/url"
-	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,18 +25,18 @@ var (
 	regexImageId = `"id":"([a-z0-9\-]*)"`
 )
 
-func (c *Client) uploadAd(ad *Ad) error {
-	log.WithFields("ad", ad).Info("uploading ad...")
+func (c *Client) uploadAd(ad *Ad) (int64, error) {
+	log.WithField("ad", ad).Info("uploading ad...")
 
 	metaInfo, err := c.getAdMetaInfo(ad)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	return c.publishAd(ad, metaInfo)
 }
 
-func (c *Client) removeAds(ids []string) error {
+func (c *Client) removeAds(ids []int64) error {
 	if len(ids) == 0 {
 		log.Info("no ads to remove")
 		return nil
@@ -44,9 +44,14 @@ func (c *Client) removeAds(ids []string) error {
 
 	log.WithField("ids", ids).Info("removing ads...")
 
+	sIds := make([]string, len(ids))
+	for i, id := range ids {
+		sIds[i] = strconv.FormatInt(id, 10)
+	}
+
 	values := url.Values{
 		"IDS": {
-			strings.Join(ids, ","),
+			strings.Join(sIds, ","),
 		},
 	}
 
@@ -144,13 +149,13 @@ func (c *Client) login(u *User) error {
 	defer res.Body.Close()
 
 	if res.StatusCode == http.StatusUnauthorized {
-		return fmt.Errorf("login failed for '%s' ('%s')", u.Username)
+		return fmt.Errorf("login failed for '%s'", u.Username)
 	}
 
 	return nil
 }
 
-func (c *Client) getAdIds() ([]string, error) {
+func (c *Client) getActiveAds() ([]*ActiveAd, error) {
 	req, err := http.NewRequest(http.MethodGet, "https://moja.bolha.com/oglasi", nil)
 	if err != nil {
 		return nil, err
@@ -177,21 +182,39 @@ func (c *Client) getAdIds() ([]string, error) {
 		return nil, err
 	}
 
-	r := regexp.MustCompile(`id="ad_(\d+)`)
-	matches := r.FindAllStringSubmatch(string(body), -1)
+	var (
+		mId    = regexp.MustCompile(`Šifra oglasa: (\d+)`).FindAllStringSubmatch(string(body), -1)
+		mOrder = regexp.MustCompile(`<span>(\d+)<\/span><a .*>Skok na vrh<\/a>`).FindAllStringSubmatch(string(body), -1)
+	)
 
-	ids := make([]string, len(matches))
-	for i, m := range matches {
-		ids[i] = m[1]
+	if len(mId) != len(mOrder) {
+		return nil, errors.New("regex matches len does not match")
 	}
 
-	return ids, nil
+	ads := make([]*ActiveAd, len(mId))
+	for i := range mId {
+		idI, err := strconv.ParseInt(mId[i][1], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		orderI, err := strconv.ParseInt(mOrder[i][1], 10, 32)
+		if err != nil {
+			return nil, err
+		}
+
+		ads[i] = &ActiveAd{
+			Id:    idI,
+			Order: int(orderI),
+		}
+	}
+
+	return ads, nil
 }
 
 func (c *Client) getAdMetaInfo(ad *Ad) (map[string]string, error) {
 	values := url.Values{
 		"categoryId": {
-			ad.CategoryId,
+			strconv.Itoa(ad.CategoryId),
 		},
 	}
 
@@ -267,7 +290,7 @@ func (c *Client) getAdMetaInfo(ad *Ad) (map[string]string, error) {
 	return matches, nil
 }
 
-func (c *Client) publishAd(ad *Ad, metaInfo map[string]string) error {
+func (c *Client) publishAd(ad *Ad, metaInfo map[string]string) (int64, error) {
 	buff := &bytes.Buffer{}
 	w := multipart.NewWriter(buff)
 	defer w.Close()
@@ -276,7 +299,7 @@ func (c *Client) publishAd(ad *Ad, metaInfo map[string]string) error {
 	for k, v := range metaInfo {
 		err := w.WriteField(k, v)
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
 
@@ -284,35 +307,35 @@ func (c *Client) publishAd(ad *Ad, metaInfo map[string]string) error {
 	params := map[string]string{
 		"cNaziv":     ad.Title,
 		"cOpis":      ad.Description,
-		"nCenaStart": ad.Price,
-		"nKatID":     ad.CategoryId,
+		"nCenaStart": strconv.Itoa(ad.Price),
+		"nKatID":     strconv.Itoa(ad.CategoryId),
 		"cTip":       "O",
 	}
 	for k, v := range params {
 		if err := w.WriteField(k, v); err != nil {
-			return err
+			return 0, err
 		}
 	}
 
 	// upload images
 	for _, img := range ad.Images {
-		imgId, err := c.uploadImage(&ad.CategoryId, img)
+		imgId, err := c.uploadImage(ad.CategoryId, img)
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		if err := w.WriteField("images[][id]", imgId); err != nil {
-			return err
+			return 0, err
 		}
 
 		if err := w.WriteField("izd_slike_order[]", imgId); err != nil {
-			return err
+			return 0, err
 		}
 	}
 
 	req, err := http.NewRequest(http.MethodPost, "http://objava-oglasa.bolha.com/oddaj.php", buff)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	overwrite := map[string]string{
@@ -330,29 +353,40 @@ func (c *Client) publishAd(ad *Ad, metaInfo map[string]string) error {
 
 	req.Header.Set("Content-Type", w.FormDataContentType())
 
+	c.allowRedirects(true)
+
 	res, err := c.httpClient.Do(req)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer res.Body.Close()
 
-	return nil
+	if res.StatusCode != http.StatusOK {
+		return 0, errors.New("error publishing ad")
+	}
+
+	resBody, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return 0, err
+	}
+
+	m := regexp.MustCompile(`<input type="hidden" id="adid" name="adid" value="(\d+)" />`).FindStringSubmatch(string(resBody))
+
+	if len(m) != 2 {
+		return 0, errors.New("error extracting id")
+	}
+
+	id, err := strconv.ParseInt(m[1], 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	return id, nil
 }
 
-func (c *Client) uploadImage(categoryId *string, imgPath string) (string, error) {
+func (c *Client) uploadImage(categoryId int, img *image.Image) (string, error) {
 	buff := &bytes.Buffer{}
 	w := multipart.NewWriter(buff)
-
-	f, err := os.Open(imgPath)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-
-	img, _, err := image.Decode(f)
-	if err != nil {
-		return "", err
-	}
 
 	h := make(textproto.MIMEHeader)
 	h.Set("Content-Disposition", `form-data; name="file"; filename="imagename"`)
@@ -363,7 +397,7 @@ func (c *Client) uploadImage(categoryId *string, imgPath string) (string, error)
 		return "", err
 	}
 
-	if err := png.Encode(part, img); err != nil {
+	if err := png.Encode(part, *img); err != nil {
 		return "", err
 	}
 
@@ -383,7 +417,7 @@ func (c *Client) uploadImage(categoryId *string, imgPath string) (string, error)
 		"User-Agent":       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36",
 		"Accept":           "*/*",
 		"X-Requested-With": "XMLHttpRequest",
-		"Referer":          fmt.Sprintf("http://objava-oglasa.bolha.com/oddaj.php?katid=%s&days=30", *categoryId),
+		"Referer":          fmt.Sprintf("http://objava-oglasa.bolha.com/oddaj.php?katid=%d&days=30", categoryId),
 		"Accept-Encoding":  "deflate",
 		"Accept-Language":  "en-US,en;q=0.9",
 	}
