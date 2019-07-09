@@ -1,4 +1,4 @@
-module github.com/seniorescobar/bolha
+module github.com/seniorescobar/bolha/client
 
 go 1.12
 
