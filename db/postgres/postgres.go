@@ -14,14 +14,14 @@ type PostgresDB struct {
 
 type Conf struct {
 	Host     string
-	Port     int
+	Port     string
 	User     string
 	Password string
 	DBName   string
 }
 
 func New(conf *Conf) (*PostgresDB, error) {
-	db, err := sql.Open("postgres", fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+	db, err := sql.Open("postgres", fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		conf.Host, conf.Port, conf.User, conf.Password, conf.DBName))
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ type Ad struct {
 	Title       string
 	Description string
 	Price       int
-	CategoryId  int64
+	CategoryId  int
 	Images      []string
 }
 
