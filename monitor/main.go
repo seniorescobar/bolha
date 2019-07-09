@@ -15,6 +15,8 @@ import (
 )
 
 const (
+	allowedOrder = 10
+
 	qURL = "https://sqs.eu-central-1.amazonaws.com/301808156345/bolha-ads-queue"
 
 	actionUpload = "upload"
@@ -45,7 +47,7 @@ func GetActiveAds(ctx context.Context) error {
 
 	svc := sqs.New(sess)
 
-	pdb, err := db.New(&postgres.Conf{
+	pdb, err := postgres.New(&postgres.Conf{
 		Host:     os.Getenv("PGHOST"),
 		Port:     os.Getenv("PGPORT"),
 		User:     os.Getenv("PGUSER"),
@@ -63,8 +65,8 @@ func GetActiveAds(ctx context.Context) error {
 
 	for _, user := range users {
 		client, err := bc.New(&bc.User{
-			Username: u.Username,
-			Password: u.Password,
+			Username: user.Username,
+			Password: user.Password,
 		})
 		if err != nil {
 			return err
@@ -77,12 +79,12 @@ func GetActiveAds(ctx context.Context) error {
 
 		for _, activeAd := range activeAds {
 			if activeAd.Order > allowedOrder {
-				record, err := pdb.GetRecord(activeAd.Id)
+				record, err := pdb.GetRecord(ctx, activeAd.Id)
 				if err != nil {
 					return err
 				}
 
-				recordString, err := json.Marshal(&Record{
+				recordJSON, err := json.Marshal(&Record{
 					User: &User{
 						Username: record.Username,
 						Password: record.Password,
@@ -95,10 +97,10 @@ func GetActiveAds(ctx context.Context) error {
 					},
 				})
 				if err != nil {
-					return nil, err
+					return err
 				}
 
-				if _, err := svc.SendMessage(prepareMessage(actionUpload, recordString)); err != nil {
+				if _, err := svc.SendMessage(prepareMessage(actionUpload, string(recordJSON))); err != nil {
 					return err
 				}
 			}
@@ -108,7 +110,7 @@ func GetActiveAds(ctx context.Context) error {
 	return nil
 }
 
-func prepareMessage(action string, message string) (*sqs.SendMessageInput, error) {
+func prepareMessage(action string, message string) *sqs.SendMessageInput {
 	return &sqs.SendMessageInput{
 		MessageAttributes: map[string]*sqs.MessageAttributeValue{
 			"action": &sqs.MessageAttributeValue{
@@ -117,7 +119,7 @@ func prepareMessage(action string, message string) (*sqs.SendMessageInput, error
 			},
 		},
 		MessageBody: aws.String(message),
-		QueueUrl:    &qURL,
+		QueueUrl:    aws.String(qURL),
 	}
 }
 
