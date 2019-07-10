@@ -143,7 +143,10 @@ func (pdb *PostgresDB) ListActiveUsers(ctx context.Context) ([]*User, error) {
 
 // GetRecord returns a record (user + ad) for a given uploaded_ad_id
 func (pdb *PostgresDB) GetRecord(ctx context.Context, uploadedAdId int64) (*Record, error) {
-	var record Record
+	record := Record{
+		User: &User{},
+		Ad:   &Ad{},
+	}
 	if err := pdb.db.QueryRowContext(ctx, `
 		SELECT
 			"u"."username",
