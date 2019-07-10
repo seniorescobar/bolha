@@ -24,13 +24,13 @@ const (
 )
 
 type Record struct {
-	User *User `json:"user"`
-	Ad   *Ad   `json:"ad"`
+	User *User
+	Ad   *Ad
 }
 
 type User struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username string
+	Password string
 }
 
 type Ad struct {
@@ -40,10 +40,10 @@ type Ad struct {
 	CategoryId  int    `json:"category-id"`
 }
 
-func GetActiveAds(ctx context.Context) error {
+func GetActiveAds(ctx context.Context) ([]*client.ActiveAd, error) {
 	sess, err := session.NewSession()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	svc := sqs.New(sess)
@@ -56,37 +56,40 @@ func GetActiveAds(ctx context.Context) error {
 		DBName:   os.Getenv("PGDATABASE"),
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer pdb.Close()
 
 	users, err := pdb.ListActiveUsers(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	outdatedAds := make([]*client.ActiveAd, 0)
 	for _, user := range users {
 		c, err := client.New(&client.User{
 			Username: user.Username,
 			Password: user.Password,
 		})
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		activeAds, err := c.GetActiveAds()
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		for _, activeAd := range activeAds {
 			if activeAd.Order > allowedOrder {
+				outdatedAds = append(outdatedAds, activeAd)
+
 				record, err := pdb.GetRecord(ctx, activeAd.Id)
 				if err != nil {
-					return err
+					return nil, err
 				}
 
-				recordJSON, err := json.Marshal(&Record{
+				if err := sendUploadMessage(svc, &Record{
 					User: &User{
 						Username: record.Username,
 						Password: record.Password,
@@ -97,32 +100,42 @@ func GetActiveAds(ctx context.Context) error {
 						Price:       record.Price,
 						CategoryId:  record.CategoryId,
 					},
-				})
-				if err != nil {
-					return err
-				}
-
-				if _, err := svc.SendMessage(prepareMessage(actionUpload, string(recordJSON))); err != nil {
-					return err
+				}); err != nil {
+					return nil, err
 				}
 			}
 		}
 	}
 
-	return nil
+	return outdatedAds, nil
 }
 
-func prepareMessage(action string, message string) *sqs.SendMessageInput {
-	return &sqs.SendMessageInput{
+func sendUploadMessage(svc *sqs.SQS, record *Record) error {
+	adJSON, err := json.Marshal(record.Ad)
+	if err != nil {
+		return err
+	}
+
+	_, err = svc.SendMessage(&sqs.SendMessageInput{
 		MessageAttributes: map[string]*sqs.MessageAttributeValue{
 			"action": &sqs.MessageAttributeValue{
 				DataType:    aws.String("String"),
-				StringValue: aws.String(action),
+				StringValue: aws.String(actionUpload),
+			},
+			"username": &sqs.MessageAttributeValue{
+				DataType:    aws.String("String"),
+				StringValue: aws.String(record.User.Username),
+			},
+			"password": &sqs.MessageAttributeValue{
+				DataType:    aws.String("String"),
+				StringValue: aws.String(record.User.Password),
 			},
 		},
-		MessageBody: aws.String(message),
+		MessageBody: aws.String(string(adJSON)),
 		QueueUrl:    aws.String(qURL),
-	}
+	})
+
+	return err
 }
 
 func main() {
