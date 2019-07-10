@@ -188,3 +188,7 @@ func (pdb *PostgresDB) addImage(ctx context.Context, tx *sql.Tx, adId int64, loc
 
 	return nil
 }
+
+func (pdb *PostgresDB) Close() {
+	pdb.db.Close()
+}
