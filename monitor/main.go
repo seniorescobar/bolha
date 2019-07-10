@@ -10,12 +10,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 
-	bc "github.com/seniorescobar/bolha/client"
+	"github.com/seniorescobar/bolha/client"
 	"github.com/seniorescobar/bolha/db/postgres"
 )
 
 const (
-	allowedOrder = 10
+	allowedOrder = 5
 
 	qURL = "https://sqs.eu-central-1.amazonaws.com/301808156345/bolha-ads-queue"
 
@@ -41,9 +41,10 @@ type Ad struct {
 }
 
 func GetActiveAds(ctx context.Context) error {
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-	}))
+	sess, err := session.NewSession()
+	if err != nil {
+		return err
+	}
 
 	svc := sqs.New(sess)
 
@@ -57,6 +58,7 @@ func GetActiveAds(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	defer pdb.Close()
 
 	users, err := pdb.ListActiveUsers(ctx)
 	if err != nil {
@@ -64,7 +66,7 @@ func GetActiveAds(ctx context.Context) error {
 	}
 
 	for _, user := range users {
-		client, err := bc.New(&bc.User{
+		c, err := client.New(&client.User{
 			Username: user.Username,
 			Password: user.Password,
 		})
@@ -72,7 +74,7 @@ func GetActiveAds(ctx context.Context) error {
 			return err
 		}
 
-		activeAds, err := client.GetActiveAds()
+		activeAds, err := c.GetActiveAds()
 		if err != nil {
 			return err
 		}
