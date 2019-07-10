@@ -1,14 +1,11 @@
-module github.com/seniorescobar/bolha/monitor
+module github.com/seniorescobar/bolha/lambda/client
 
 go 1.12
 
 require (
 	github.com/aws/aws-lambda-go v1.11.1
-	github.com/aws/aws-sdk-go v1.20.17
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
-	github.com/lib/pq v1.1.1 // indirect
-	github.com/seniorescobar/bolha v0.0.0-20190710093656-ba075c35fc45
-	github.com/seniorescobar/bolha/client v0.0.0-20190710093656-ba075c35fc45
+	github.com/seniorescobar/bolha/client v0.0.0-20190710120728-9d2887cc9320
 	github.com/stretchr/objx v0.2.0 // indirect
 	golang.org/x/net v0.0.0-20190628185345-da137c7871d7 // indirect
 	golang.org/x/sys v0.0.0-20190626221950-04f50cda93cb // indirect
