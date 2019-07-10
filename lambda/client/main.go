@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -27,28 +28,31 @@ func Handler(ctx context.Context, event events.SQSEvent) error {
 	for _, record := range event.Records {
 		action, ok := record.MessageAttributes["action"]
 		if !ok {
-			return nil
+			return errors.New("missing action")
 		}
 
 		username, ok := record.MessageAttributes["username"]
 		if !ok {
-			return nil
+			return errors.New("missing username")
 		}
 
 		password, ok := record.MessageAttributes["password"]
 		if !ok {
-			return nil
+			return errors.New("missing password")
 		}
 
 		c, err := client.New(&client.User{
 			Username: *username.StringValue,
 			Password: *password.StringValue,
 		})
+		if err != nil {
+			return err
+		}
 
 		switch *action.StringValue {
 		case actionUpload:
 			var ad Ad
-			if err := json.Unmarshal(record.Body, &ad); err != nil {
+			if err := json.Unmarshal([]byte(record.Body), &ad); err != nil {
 				return err
 			}
 
