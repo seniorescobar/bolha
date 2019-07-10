@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 
 	_ "github.com/lib/pq"
 )
@@ -18,6 +19,16 @@ type Conf struct {
 	User     string
 	Password string
 	DBName   string
+}
+
+func NewFromEnv() (*PostgresDB, error) {
+	return New(&Conf{
+		Host:     os.Getenv("PGHOST"),
+		Port:     os.Getenv("PGPORT"),
+		User:     os.Getenv("PGUSER"),
+		Password: os.Getenv("PGPASSWORD"),
+		DBName:   os.Getenv("PGDATABASE"),
+	})
 }
 
 func New(conf *Conf) (*PostgresDB, error) {
@@ -35,8 +46,8 @@ func New(conf *Conf) (*PostgresDB, error) {
 }
 
 type Record struct {
-	User
-	Ad
+	User *User
+	Ad   *Ad
 }
 
 type User struct {
@@ -45,6 +56,7 @@ type User struct {
 }
 
 type Ad struct {
+	Id          int64
 	Title       string
 	Description string
 	Price       int
@@ -136,6 +148,7 @@ func (pdb *PostgresDB) GetRecord(ctx context.Context, uploadedAdId int64) (*Reco
 		SELECT
 			"u"."username",
 			"u"."password",
+			"a"."id",
 			"a"."title",
 			"a"."description",
 			"a"."price",
@@ -145,7 +158,7 @@ func (pdb *PostgresDB) GetRecord(ctx context.Context, uploadedAdId int64) (*Reco
 		LEFT JOIN "user" "u" ON "u"."username" = "a"."user_username"
 		WHERE
 			"ua"."uploaded_ad_id" = $1
-	`, uploadedAdId).Scan(&record.User.Username, &record.User.Password, &record.Ad.Title, &record.Ad.Description, &record.Ad.Price, &record.Ad.CategoryId); err != nil {
+	`, uploadedAdId).Scan(&record.User.Username, &record.User.Password, &record.Ad.Id, &record.Ad.Title, &record.Ad.Description, &record.Ad.Price, &record.Ad.CategoryId); err != nil {
 		return nil, err
 	}
 
@@ -187,6 +200,15 @@ func (pdb *PostgresDB) addImage(ctx context.Context, tx *sql.Tx, adId int64, loc
 	}
 
 	return nil
+}
+
+func (pdb *PostgresDB) AddUploadedAd(ctx contex.Context, adId, uploadedAdId int64) error {
+	if _, err := pdb.db.ExecContext(ctx, `INSERT INTO "uploaded_ad"("ad_id", "uploaded_ad_id") VALUES($1, $2)`, adId, uploadedAdId); err != nil {
+		return err
+	}
+
+	return nil
+
 }
 
 func (pdb *PostgresDB) Close() {
