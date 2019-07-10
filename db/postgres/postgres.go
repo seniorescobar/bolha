@@ -158,7 +158,15 @@ func (pdb *PostgresDB) GetRecord(ctx context.Context, uploadedAdId int64) (*Reco
 		LEFT JOIN "user" "u" ON "u"."username" = "a"."user_username"
 		WHERE
 			"ua"."uploaded_ad_id" = $1
-	`, uploadedAdId).Scan(&record.User.Username, &record.User.Password, &record.Ad.Id, &record.Ad.Title, &record.Ad.Description, &record.Ad.Price, &record.Ad.CategoryId); err != nil {
+	`, uploadedAdId).Scan(
+		&record.User.Username,
+		&record.User.Password,
+		&record.Ad.Id,
+		&record.Ad.Title,
+		&record.Ad.Description,
+		&record.Ad.Price,
+		&record.Ad.CategoryId,
+	); err != nil {
 		return nil, err
 	}
 
