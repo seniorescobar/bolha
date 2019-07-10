@@ -202,7 +202,7 @@ func (pdb *PostgresDB) addImage(ctx context.Context, tx *sql.Tx, adId int64, loc
 	return nil
 }
 
-func (pdb *PostgresDB) AddUploadedAd(ctx contex.Context, adId, uploadedAdId int64) error {
+func (pdb *PostgresDB) AddUploadedAd(ctx context.Context, adId, uploadedAdId int64) error {
 	if _, err := pdb.db.ExecContext(ctx, `INSERT INTO "uploaded_ad"("ad_id", "uploaded_ad_id") VALUES($1, $2)`, adId, uploadedAdId); err != nil {
 		return err
 	}
