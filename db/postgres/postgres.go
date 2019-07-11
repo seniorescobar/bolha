@@ -147,6 +147,8 @@ func (pdb *PostgresDB) GetRecord(ctx context.Context, uploadedAdId int64) (*Reco
 		User: &User{},
 		Ad:   &Ad{},
 	}
+
+	// get ad
 	if err := pdb.db.QueryRowContext(ctx, `
 		SELECT
 			"u"."username",
@@ -170,6 +172,35 @@ func (pdb *PostgresDB) GetRecord(ctx context.Context, uploadedAdId int64) (*Reco
 		&record.Ad.Price,
 		&record.Ad.CategoryId,
 	); err != nil {
+		return nil, err
+	}
+
+	// get images
+	rows, err := pdb.db.QueryContext(ctx, `
+		SELECT
+			"i"."location"
+		FROM "images" "i"
+		LEFT JOIN "uploaded_ad" "ua" ON "ua"."ad_id" = "i"."ad_id"
+		WHERE "ua"."uploaded_ad_id" = $1
+	`, uploadedAdId)
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var img string
+		if err := rows.Scan(&img); err != nil {
+			return nil, err
+		}
+
+		record.Ad.Images = append(record.Ad.Images, img)
+	}
+
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+
+	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
