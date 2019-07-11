@@ -213,15 +213,25 @@ func (pdb *PostgresDB) addImage(ctx context.Context, tx *sql.Tx, adId int64, loc
 	return nil
 }
 
+// AddUploadedAd inserts a pair of (ad_id, uploaded_ad_id) into uploaded_ad table
 func (pdb *PostgresDB) AddUploadedAd(ctx context.Context, adId, uploadedAdId int64) error {
 	if _, err := pdb.db.ExecContext(ctx, `INSERT INTO "uploaded_ad"("ad_id", "uploaded_ad_id") VALUES($1, $2)`, adId, uploadedAdId); err != nil {
 		return err
 	}
 
 	return nil
-
 }
 
+// RemoveUploadedAd removes a pair of (ad_id, uploaded_ad_id) from uploaded_ad_table
+func (pdb *PostgresDB) RemoveUploadedAd(ctx context.Context, uploadedAdId int64) error {
+	if _, err := pdb.db.ExecContext(ctx, `DELETE FROM "uploaded_ad" WHERE "uploaded_ad_id" = $1`, uploadedAdId); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Close closes connection to database
 func (pdb *PostgresDB) Close() {
 	pdb.db.Close()
 }
