@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	allowedOrder = 0
+	allowedOrder = 3
 
 	qURL = "https://sqs.eu-central-1.amazonaws.com/301808156345/bolha-ads-queue"
 
