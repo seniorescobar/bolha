@@ -179,7 +179,7 @@ func (pdb *PostgresDB) GetRecord(ctx context.Context, uploadedAdId int64) (*Reco
 	rows, err := pdb.db.QueryContext(ctx, `
 		SELECT
 			"i"."location"
-		FROM "images" "i"
+		FROM "image" "i"
 		LEFT JOIN "uploaded_ad" "ua" ON "ua"."ad_id" = "i"."ad_id"
 		WHERE "ua"."uploaded_ad_id" = $1
 	`, uploadedAdId)
