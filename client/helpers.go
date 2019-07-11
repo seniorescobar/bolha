@@ -74,17 +74,8 @@ func (c *Client) removeAds(ids []int64) error {
 		req.Header.Set(k, v)
 	}
 
-	res, err := c.httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return errors.New("ads not removed")
-	}
-
-	return nil
+	_, err = c.httpClient.Do(req)
+	return err
 }
 
 func getHttpClient() (*http.Client, error) {
