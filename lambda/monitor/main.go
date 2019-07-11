@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"os"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
@@ -34,6 +33,7 @@ type User struct {
 }
 
 type Ad struct {
+	Id          int64  `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Price       int    `json:"price"`
@@ -48,13 +48,7 @@ func GetActiveAds(ctx context.Context) ([]*client.ActiveAd, error) {
 
 	svc := sqs.New(sess)
 
-	pdb, err := postgres.New(&postgres.Conf{
-		Host:     os.Getenv("PGHOST"),
-		Port:     os.Getenv("PGPORT"),
-		User:     os.Getenv("PGUSER"),
-		Password: os.Getenv("PGPASSWORD"),
-		DBName:   os.Getenv("PGDATABASE"),
-	})
+	pdb, err := postgres.NewFromEnv()
 	if err != nil {
 		return nil, err
 	}
@@ -91,14 +85,15 @@ func GetActiveAds(ctx context.Context) ([]*client.ActiveAd, error) {
 
 				if err := sendUploadMessage(svc, &Record{
 					User: &User{
-						Username: record.Username,
-						Password: record.Password,
+						Username: record.User.Username,
+						Password: record.User.Password,
 					},
 					Ad: &Ad{
-						Title:       record.Title,
-						Description: record.Description,
-						Price:       record.Price,
-						CategoryId:  record.CategoryId,
+						Id:          record.Ad.Id,
+						Title:       record.Ad.Title,
+						Description: record.Ad.Description,
+						Price:       record.Ad.Price,
+						CategoryId:  record.Ad.CategoryId,
 					},
 				}); err != nil {
 					return nil, err
