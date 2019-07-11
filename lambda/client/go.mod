@@ -7,8 +7,8 @@ require (
 	github.com/aws/aws-sdk-go v1.20.18
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/lib/pq v1.1.1 // indirect
-	github.com/seniorescobar/bolha v0.0.0-20190711142517-460f2e0951cd
-	github.com/seniorescobar/bolha/client v0.0.0-20190711142517-460f2e0951cd
+	github.com/seniorescobar/bolha v0.0.0-20190711154614-62d372f17f6a
+	github.com/seniorescobar/bolha/client v0.0.0-20190711154614-62d372f17f6a
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/objx v0.2.0 // indirect
 	golang.org/x/net v0.0.0-20190628185345-da137c7871d7 // indirect

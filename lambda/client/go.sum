@@ -27,6 +27,8 @@ github.com/seniorescobar/bolha v0.0.0-20190711122211-9afadabf9a59 h1:Aps92Im/IxC
 github.com/seniorescobar/bolha v0.0.0-20190711122211-9afadabf9a59/go.mod h1:lm3oOQH1TI4PHs/B1ss30J6q1/0lIfVAQGitozXA7Dg=
 github.com/seniorescobar/bolha v0.0.0-20190711142517-460f2e0951cd h1:EU0l37MzZag/kjwvs/dw72lTnsAp33PZ8f0D55PgvEo=
 github.com/seniorescobar/bolha v0.0.0-20190711142517-460f2e0951cd/go.mod h1:lm3oOQH1TI4PHs/B1ss30J6q1/0lIfVAQGitozXA7Dg=
+github.com/seniorescobar/bolha v0.0.0-20190711154614-62d372f17f6a h1:tMNhLPucRrGZGyV3xLoKKHlq2x/64P9ZSznA2qrSXck=
+github.com/seniorescobar/bolha v0.0.0-20190711154614-62d372f17f6a/go.mod h1:lm3oOQH1TI4PHs/B1ss30J6q1/0lIfVAQGitozXA7Dg=
 github.com/seniorescobar/bolha-client v0.0.0-20190710094735-0abec475f553 h1:YDii2LdTWeivSZ4/hVPzvVDJof9rqJZMqMPgc3BbNoM=
 github.com/seniorescobar/bolha/client v0.0.0-20190710094735-0abec475f553 h1:W37OlbWRMeSIjU0d8BhOUWmoxwIRIrS/CPBAxLH2Zfo=
 github.com/seniorescobar/bolha/client v0.0.0-20190710094735-0abec475f553/go.mod h1:edXv6PYvffxqw4yoSm+NRfQIW9g7TUDh70TUK2U3Y18=
@@ -42,6 +44,8 @@ github.com/seniorescobar/bolha/client v0.0.0-20190711122211-9afadabf9a59 h1:MtvX
 github.com/seniorescobar/bolha/client v0.0.0-20190711122211-9afadabf9a59/go.mod h1:edXv6PYvffxqw4yoSm+NRfQIW9g7TUDh70TUK2U3Y18=
 github.com/seniorescobar/bolha/client v0.0.0-20190711142517-460f2e0951cd h1:Sj8WOiodfnqYQgMRAP0HJCx6zpPplKw8pN/J97TvYPc=
 github.com/seniorescobar/bolha/client v0.0.0-20190711142517-460f2e0951cd/go.mod h1:edXv6PYvffxqw4yoSm+NRfQIW9g7TUDh70TUK2U3Y18=
+github.com/seniorescobar/bolha/client v0.0.0-20190711154614-62d372f17f6a h1:vIPDidANsqMu4ZVpvZVbLXvArA9+r+4j8c31aAuX434=
+github.com/seniorescobar/bolha/client v0.0.0-20190711154614-62d372f17f6a/go.mod h1:edXv6PYvffxqw4yoSm+NRfQIW9g7TUDh70TUK2U3Y18=
 github.com/sirupsen/logrus v1.4.2 h1:SPIRibHv4MatM3XXNO2BJeFLZwZ2LvZgfQ5+UNI2im4=
 github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6MwdIuYE2rE=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
