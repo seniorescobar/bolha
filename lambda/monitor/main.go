@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
@@ -11,10 +12,12 @@ import (
 
 	"github.com/seniorescobar/bolha/client"
 	"github.com/seniorescobar/bolha/db/postgres"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
-	allowedOrder = 5
+	allowedOrder = 0
 
 	qURL = "https://sqs.eu-central-1.amazonaws.com/301808156345/bolha-ads-queue"
 
@@ -33,11 +36,12 @@ type User struct {
 }
 
 type Ad struct {
-	Id          int64  `json:"id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	Price       int    `json:"price"`
-	CategoryId  int    `json:"category-id"`
+	Id          int64    `json:"id"`
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	Price       int      `json:"price"`
+	CategoryId  int      `json:"category-id"`
+	Images      []string `json:"images"`
 }
 
 func GetActiveAds(ctx context.Context) ([]*client.ActiveAd, error) {
@@ -83,6 +87,15 @@ func GetActiveAds(ctx context.Context) ([]*client.ActiveAd, error) {
 					return nil, err
 				}
 
+				log.Printf("record %+v\n", record)
+
+				if err := sendRemoveMessage(svc, &User{
+					Username: record.User.Username,
+					Password: record.User.Password,
+				}, activeAd.Id); err != nil {
+					return nil, err
+				}
+
 				if err := sendUploadMessage(svc, &Record{
 					User: &User{
 						Username: record.User.Username,
@@ -94,6 +107,7 @@ func GetActiveAds(ctx context.Context) ([]*client.ActiveAd, error) {
 						Description: record.Ad.Description,
 						Price:       record.Ad.Price,
 						CategoryId:  record.Ad.CategoryId,
+						Images:      record.Ad.Images,
 					},
 				}); err != nil {
 					return nil, err
@@ -111,6 +125,8 @@ func sendUploadMessage(svc *sqs.SQS, record *Record) error {
 		return err
 	}
 
+	log.Info("sending ad JSON", string(adJSON))
+
 	_, err = svc.SendMessage(&sqs.SendMessageInput{
 		MessageAttributes: map[string]*sqs.MessageAttributeValue{
 			"action": &sqs.MessageAttributeValue{
@@ -127,6 +143,29 @@ func sendUploadMessage(svc *sqs.SQS, record *Record) error {
 			},
 		},
 		MessageBody: aws.String(string(adJSON)),
+		QueueUrl:    aws.String(qURL),
+	})
+
+	return err
+}
+
+func sendRemoveMessage(svc *sqs.SQS, user *User, uploadedAdId int64) error {
+	_, err := svc.SendMessage(&sqs.SendMessageInput{
+		MessageAttributes: map[string]*sqs.MessageAttributeValue{
+			"action": &sqs.MessageAttributeValue{
+				DataType:    aws.String("String"),
+				StringValue: aws.String(actionRemove),
+			},
+			"username": &sqs.MessageAttributeValue{
+				DataType:    aws.String("String"),
+				StringValue: aws.String(user.Username),
+			},
+			"password": &sqs.MessageAttributeValue{
+				DataType:    aws.String("String"),
+				StringValue: aws.String(user.Password),
+			},
+		},
+		MessageBody: aws.String(strconv.FormatInt(uploadedAdId, 10)),
 		QueueUrl:    aws.String(qURL),
 	})
 
