@@ -432,13 +432,15 @@ func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 	res.Body.Read(make([]byte, 15))
 	res.Body.Read(id)
 
-	if _, err := uuid.ParseBytes(id); err != nil {
-		return "", fmt.Errorf(`invalid uuid %s`, string(id))
+	idStr := string(id)
+
+	if _, err := uuid.Parse(idStr); err != nil {
+		return "", fmt.Errorf(`invalid uuid %s`, idStr)
 	}
 
-	log.WithField("id", id).Info("extracted uploaded image id")
+	log.WithField("id", idStr).Info("extracted uploaded image id")
 
-	return string(id), nil
+	return idStr, nil
 }
 
 func getDefaultHeaders(overwrite map[string]string) map[string]string {
