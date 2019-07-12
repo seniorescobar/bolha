@@ -7,6 +7,7 @@ github.com/aws/aws-sdk-go v1.20.18/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpi
 github.com/aws/aws-sdk-go v1.20.19 h1:RQDLGGlcffQzAceEXGdMu+uGGPGhNu+vNG3BrUZAMPI=
 github.com/aws/aws-sdk-go v1.20.19/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/google/pprof v0.0.0-20190515194954-54271f7e092f/go.mod h1:zfwlbNMJ+OItoe0UupaVj+oy1omPYYDuagoSzA8v9mc=
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
@@ -16,6 +17,7 @@ github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxv
 github.com/konsorten/go-windows-terminal-sequences v1.0.2/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/lib/pq v1.1.1 h1:sJZmqHoEaY7f+NPP8pgLB/WxulyR3fewgCM2qaSlBb4=
 github.com/lib/pq v1.1.1/go.mod h1:5WUZQaWbwv1U+lTReE5YruASi9Al49XbQIvNi/34Woo=
+github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/seniorescobar/bolha v0.0.0-20190709155913-33edf22a6649 h1:F5N6wf7KSgNnMnm9dNogwCEFLWg+BCsHxaCS2Q5bVBo=
 github.com/seniorescobar/bolha v0.0.0-20190709155913-33edf22a6649/go.mod h1:lm3oOQH1TI4PHs/B1ss30J6q1/0lIfVAQGitozXA7Dg=
@@ -42,6 +44,8 @@ github.com/seniorescobar/bolha v0.0.0-20190711205405-8ce980e8705b h1:GEsDb9WM8e2
 github.com/seniorescobar/bolha v0.0.0-20190711205405-8ce980e8705b/go.mod h1:lm3oOQH1TI4PHs/B1ss30J6q1/0lIfVAQGitozXA7Dg=
 github.com/seniorescobar/bolha v0.0.0-20190712172040-dde92f6bf79e h1:tIOsLXnorvBQgFonHvmX3nUsgZRK2277BIA2ztVn3o4=
 github.com/seniorescobar/bolha v0.0.0-20190712172040-dde92f6bf79e/go.mod h1:lm3oOQH1TI4PHs/B1ss30J6q1/0lIfVAQGitozXA7Dg=
+github.com/seniorescobar/bolha v0.0.0-20190712175700-776b6a21d854 h1:UsmJ/MRtnc5B3U/VX2G8bNj2RoO1eTLyvlTr2Mw3tcg=
+github.com/seniorescobar/bolha v0.0.0-20190712175700-776b6a21d854/go.mod h1:lm3oOQH1TI4PHs/B1ss30J6q1/0lIfVAQGitozXA7Dg=
 github.com/seniorescobar/bolha-client v0.0.0-20190709185125-c613c890254c h1:9sAKL2a8NsavQWjSA93bMw9TCBNSY4Y/vOeYsQwTpH4=
 github.com/seniorescobar/bolha/client v0.0.0-20190709155913-33edf22a6649 h1:UQtWPzpegSb3ExOoWscjHy9J8LBXGBpGER6CUCTztcs=
 github.com/seniorescobar/bolha/client v0.0.0-20190709155913-33edf22a6649/go.mod h1:edXv6PYvffxqw4yoSm+NRfQIW9g7TUDh70TUK2U3Y18=
@@ -67,10 +71,14 @@ github.com/seniorescobar/bolha/client v0.0.0-20190711205405-8ce980e8705b h1:vqyv
 github.com/seniorescobar/bolha/client v0.0.0-20190711205405-8ce980e8705b/go.mod h1:edXv6PYvffxqw4yoSm+NRfQIW9g7TUDh70TUK2U3Y18=
 github.com/seniorescobar/bolha/client v0.0.0-20190712172040-dde92f6bf79e h1:HS7hZV/3m1WM/36N+kuqXDMRrKA6STfVTtf27m07Nxk=
 github.com/seniorescobar/bolha/client v0.0.0-20190712172040-dde92f6bf79e/go.mod h1:edXv6PYvffxqw4yoSm+NRfQIW9g7TUDh70TUK2U3Y18=
+github.com/seniorescobar/bolha/client v0.0.0-20190712175700-776b6a21d854 h1:5T1KgQwlAOKnLOrxgPhcaCFWmrfODsjsz2E8KejsSG8=
+github.com/seniorescobar/bolha/client v0.0.0-20190712175700-776b6a21d854/go.mod h1:edXv6PYvffxqw4yoSm+NRfQIW9g7TUDh70TUK2U3Y18=
 github.com/seniorescobar/bolha/lambda/common v0.0.0-20190711205405-8ce980e8705b h1:hVqObR1o3+GgvHGFBnyhsROh7I9nUngGbMWdJWO+nQQ=
 github.com/seniorescobar/bolha/lambda/common v0.0.0-20190711205405-8ce980e8705b/go.mod h1:7d+1IVoKBVbJ39Ev/wXAAoYCjjkoYQD3AjLnim889wo=
 github.com/seniorescobar/bolha/lambda/common v0.0.0-20190712172040-dde92f6bf79e h1:FxXd68bmTrVNGKSTIxjTs+LRiejII+fviknWevfcsmE=
 github.com/seniorescobar/bolha/lambda/common v0.0.0-20190712172040-dde92f6bf79e/go.mod h1:f1jPj/t7MlgA2XR/kwr5/+1kXh8om13VdNV3qwZXM10=
+github.com/seniorescobar/bolha/lambda/common v0.0.0-20190712175700-776b6a21d854 h1:o7gXq860HCqunuc53vrg4JgpazFrkQF/OYUASUc7bCI=
+github.com/seniorescobar/bolha/lambda/common v0.0.0-20190712175700-776b6a21d854/go.mod h1:f1jPj/t7MlgA2XR/kwr5/+1kXh8om13VdNV3qwZXM10=
 github.com/sirupsen/logrus v1.4.2 h1:SPIRibHv4MatM3XXNO2BJeFLZwZ2LvZgfQ5+UNI2im4=
 github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6MwdIuYE2rE=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
@@ -78,6 +86,7 @@ github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/objx v0.2.0/go.mod h1:qt09Ya8vawLte6SNmTgCsAVtYtaKzEcn8ATUoHMkEqE=
 github.com/stretchr/testify v1.2.1/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
+github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 golang.org/x/arch v0.0.0-20190312162104-788fe5ffcd8c h1:Rx/HTKi09myZ25t1SOlDHmHOy/mKxNAcu0hP1oPX9qM=
 golang.org/x/arch v0.0.0-20190312162104-788fe5ffcd8c/go.mod h1:flIaEI6LNU6xOCD5PaJvn9wGP0agmIOqjrtsKGRguv4=

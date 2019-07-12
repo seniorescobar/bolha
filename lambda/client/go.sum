@@ -34,6 +34,8 @@ github.com/seniorescobar/bolha v0.0.0-20190711154614-62d372f17f6a/go.mod h1:lm3o
 github.com/seniorescobar/bolha v0.0.0-20190711161353-624d1296bd76 h1:Vt2Mlxy39jxkJfdLCgyviOkvKtIsGYpKcntb0pMwpuA=
 github.com/seniorescobar/bolha v0.0.0-20190712172529-1457a702ff22 h1:+dvW5QaunlKOGH+kpNDDlML4mvMNJxkN4bSYulWvlqk=
 github.com/seniorescobar/bolha v0.0.0-20190712172529-1457a702ff22/go.mod h1:lm3oOQH1TI4PHs/B1ss30J6q1/0lIfVAQGitozXA7Dg=
+github.com/seniorescobar/bolha v0.0.0-20190712175700-776b6a21d854 h1:UsmJ/MRtnc5B3U/VX2G8bNj2RoO1eTLyvlTr2Mw3tcg=
+github.com/seniorescobar/bolha v0.0.0-20190712175700-776b6a21d854/go.mod h1:lm3oOQH1TI4PHs/B1ss30J6q1/0lIfVAQGitozXA7Dg=
 github.com/seniorescobar/bolha-client v0.0.0-20190710094735-0abec475f553 h1:YDii2LdTWeivSZ4/hVPzvVDJof9rqJZMqMPgc3BbNoM=
 github.com/seniorescobar/bolha/client v0.0.0-20190710094735-0abec475f553 h1:W37OlbWRMeSIjU0d8BhOUWmoxwIRIrS/CPBAxLH2Zfo=
 github.com/seniorescobar/bolha/client v0.0.0-20190710094735-0abec475f553/go.mod h1:edXv6PYvffxqw4yoSm+NRfQIW9g7TUDh70TUK2U3Y18=
@@ -53,10 +55,14 @@ github.com/seniorescobar/bolha/client v0.0.0-20190711154614-62d372f17f6a h1:vIPD
 github.com/seniorescobar/bolha/client v0.0.0-20190711154614-62d372f17f6a/go.mod h1:edXv6PYvffxqw4yoSm+NRfQIW9g7TUDh70TUK2U3Y18=
 github.com/seniorescobar/bolha/client v0.0.0-20190712172529-1457a702ff22 h1:0oe3GNCHJQS3r2m7CE9rcYd2coTEfQjMRChIVqZ4gVk=
 github.com/seniorescobar/bolha/client v0.0.0-20190712172529-1457a702ff22/go.mod h1:edXv6PYvffxqw4yoSm+NRfQIW9g7TUDh70TUK2U3Y18=
+github.com/seniorescobar/bolha/client v0.0.0-20190712175700-776b6a21d854 h1:5T1KgQwlAOKnLOrxgPhcaCFWmrfODsjsz2E8KejsSG8=
+github.com/seniorescobar/bolha/client v0.0.0-20190712175700-776b6a21d854/go.mod h1:edXv6PYvffxqw4yoSm+NRfQIW9g7TUDh70TUK2U3Y18=
 github.com/seniorescobar/bolha/lambda/common v0.0.0-20190711205405-8ce980e8705b h1:hVqObR1o3+GgvHGFBnyhsROh7I9nUngGbMWdJWO+nQQ=
 github.com/seniorescobar/bolha/lambda/common v0.0.0-20190711205405-8ce980e8705b/go.mod h1:7d+1IVoKBVbJ39Ev/wXAAoYCjjkoYQD3AjLnim889wo=
 github.com/seniorescobar/bolha/lambda/common v0.0.0-20190712172529-1457a702ff22 h1:DYrqNglYXhAb2Vrl1QaRfEM7H40FZ0vG6ET/ob7ZJuA=
 github.com/seniorescobar/bolha/lambda/common v0.0.0-20190712172529-1457a702ff22/go.mod h1:f1jPj/t7MlgA2XR/kwr5/+1kXh8om13VdNV3qwZXM10=
+github.com/seniorescobar/bolha/lambda/common v0.0.0-20190712175700-776b6a21d854 h1:o7gXq860HCqunuc53vrg4JgpazFrkQF/OYUASUc7bCI=
+github.com/seniorescobar/bolha/lambda/common v0.0.0-20190712175700-776b6a21d854/go.mod h1:f1jPj/t7MlgA2XR/kwr5/+1kXh8om13VdNV3qwZXM10=
 github.com/sirupsen/logrus v1.4.2 h1:SPIRibHv4MatM3XXNO2BJeFLZwZ2LvZgfQ5+UNI2im4=
 github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6MwdIuYE2rE=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

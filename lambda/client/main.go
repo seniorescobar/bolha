@@ -82,9 +82,7 @@ func Handler(ctx context.Context, event events.SQSEvent) error {
 				return err
 			}
 
-			if err := sqsClient.DeleteMessage(record.ReceiptHandle); err != nil {
-				return err
-			}
+			sqsClient.DeleteMessage(record.ReceiptHandle)
 
 		case common.ActionRemove:
 			uploadedAdId, err := strconv.ParseInt(record.Body, 10, 64)
@@ -100,9 +98,7 @@ func Handler(ctx context.Context, event events.SQSEvent) error {
 				return err
 			}
 
-			if err := sqsClient.DeleteMessage(record.ReceiptHandle); err != nil {
-				return err
-			}
+			sqsClient.DeleteMessage(record.ReceiptHandle)
 		}
 	}
 
