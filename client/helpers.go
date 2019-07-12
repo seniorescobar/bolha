@@ -2,7 +2,6 @@ package client
 
 import (
 	"bytes"
-	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
@@ -377,9 +376,7 @@ func (c *Client) publishAd(ad *Ad, metaInfo map[string]string) (int64, error) {
 func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 	buff := new(bytes.Buffer)
 
-	gzw := gzip.NewWriter(buff)
-
-	mpw := multipart.NewWriter(gzw)
+	mpw := multipart.NewWriter(buff)
 
 	h := make(textproto.MIMEHeader)
 	h.Set("Content-Disposition", `form-data; name="file"; filename="imagename"`)
@@ -395,10 +392,6 @@ func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 	}
 
 	if err := mpw.Close(); err != nil {
-		return "", err
-	}
-
-	if err := gzw.Close(); err != nil {
 		return "", err
 	}
 
@@ -419,9 +412,10 @@ func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 		"Referer":          fmt.Sprintf("http://objava-oglasa.bolha.com/oddaj.php?katid=%d&days=30", categoryId),
 		"Accept-Encoding":  "deflate",
 		"Accept-Language":  "en-US,en;q=0.9",
-		"Content-Encoding": "gzip",
-		"Content-Type":     mpw.FormDataContentType(),
-		"MEDIA-ACTION":     "save-to-mrs",
+
+		"Content-Type": mpw.FormDataContentType(),
+
+		"MEDIA-ACTION": "save-to-mrs",
 	} {
 		req.Header.Add(k, v)
 	}
@@ -432,19 +426,12 @@ func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 	}
 	defer res.Body.Close()
 
-	resBody, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return "", err
-	}
+	// perf hack, uuid is 35 chars long
+	id := make([]byte, 35)
+	res.Body.Read(make([]byte, 15))
+	res.Body.Read(id)
 
-	r := regexp.MustCompile(regexImageId)
-	m := r.FindSubmatch(resBody)
-	if len(m) < 2 {
-		return "", errors.New("could not extract uploaded image id")
-	}
-
-	imgId := string(m[1])
-	return imgId, nil
+	return string(id), nil
 }
 
 func getDefaultHeaders(overwrite map[string]string) map[string]string {
