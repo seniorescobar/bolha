@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
@@ -18,10 +19,6 @@ import (
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
-)
-
-var (
-	regexImageId = `"id":"([a-z0-9\-]*)"`
 )
 
 func (c *Client) uploadAd(ad *Ad) (int64, error) {
@@ -213,16 +210,19 @@ func (c *Client) getAdMetaInfo(ad *Ad) (map[string]string, error) {
 		return nil, err
 	}
 
-	overwrite := map[string]string{
+	for k, v := range map[string]string{
 		"Content-Type":              "application/x-www-form-urlencoded",
 		"Host":                      "objava-oglasa.bolha.com",
 		"Origin":                    "http://objava-oglasa.bolha.com",
 		"Referer":                   "http://objava-oglasa.bolha.com/",
 		"Upgrade-Insecure-Requests": "1",
-	}
-	headers := getDefaultHeaders(overwrite)
-
-	for k, v := range headers {
+		"Accept":                    "application/json, text/javascript, */*; q=0.01",
+		"Accept-Encoding":           "gzip",
+		"Accept-Language":           "en-US,en;q=0.9,sl;q=0.8,hr;q=0.7",
+		"Cache-Control":             "max-age=0",
+		"Connection":                "keep-alive",
+		"User-Agent":                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36",
+	} {
 		req.Header.Add(k, v)
 	}
 
@@ -236,6 +236,12 @@ func (c *Client) getAdMetaInfo(ad *Ad) (map[string]string, error) {
 		return nil, err
 	}
 	defer res.Body.Close()
+
+	gzReader, err := gzip.NewReader(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	defer gzReader.Close()
 
 	regex := map[string]*regexp.Regexp{
 		"submitTakoj":         regexp.MustCompile(`<input type="hidden" name="submitTakoj" id="submitTakoj" value="(.*?)" />`),
@@ -262,7 +268,7 @@ func (c *Client) getAdMetaInfo(ad *Ad) (map[string]string, error) {
 		"lEdit":               regexp.MustCompile(`<input style="display:none;" type="hidden" name="lEdit" value="(.*?)" />`),
 	}
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := ioutil.ReadAll(gzReader)
 	if err != nil {
 		return nil, err
 	}
