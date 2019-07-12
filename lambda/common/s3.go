@@ -2,7 +2,7 @@ package common
 
 import (
 	"bytes"
-	"image"
+	"io"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -28,7 +28,7 @@ func NewS3Client(sess *session.Session) *S3Client {
 	}
 }
 
-func (s3client *S3Client) DownloadImage(imgPath string) (*image.Image, error) {
+func (s3client *S3Client) DownloadImage(imgPath string) (io.Reader, error) {
 	log.WithField("imgPath", imgPath).Info("downloading image from s3")
 
 	buff := new(aws.WriteAtBuffer)
@@ -43,7 +43,5 @@ func (s3client *S3Client) DownloadImage(imgPath string) (*image.Image, error) {
 
 	imgBytes := buff.Bytes()
 
-	img, _, err := image.Decode(bytes.NewReader(imgBytes))
-
-	return &img, err
+	return bytes.NewReader(imgBytes), nil
 }
