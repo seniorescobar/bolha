@@ -23,16 +23,17 @@ type SQSClient struct {
 func NewSQSClient(sess *session.Session) (*SQSClient, error) {
 	svc := sqs.New(sess)
 
-	qURLRes, err := svc.GetQueueUrl(&sqs.GetQueueUrlInput{
-		QueueName: aws.String(qName),
-	})
-	if err != nil {
-		return nil, err
-	}
+	// qURLRes, err := svc.GetQueueUrl(&sqs.GetQueueUrlInput{
+	// 	QueueName: aws.String(qName),
+	// })
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	return &SQSClient{
-		svc:  svc,
-		qURL: *qURLRes.QueueUrl,
+		svc: svc,
+		// qURL: *qURLRes.QueueUrl,
+		qURL: "https://sqs.eu-central-1.amazonaws.com/301808156345/bolha-ads-queue",
 	}, nil
 }
 
