@@ -427,9 +427,11 @@ func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 	defer res.Body.Close()
 
 	// perf hack, uuid is 35 chars long
-	id := make([]byte, 35)
+	id := make([]byte, 36)
 	res.Body.Read(make([]byte, 15))
 	res.Body.Read(id)
+
+	log.WithField("id", id).Info("extracted uploaded image id")
 
 	return string(id), nil
 }
