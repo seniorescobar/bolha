@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
@@ -374,14 +375,17 @@ func (c *Client) publishAd(ad *Ad, metaInfo map[string]string) (int64, error) {
 }
 
 func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
-	buff := &bytes.Buffer{}
-	w := multipart.NewWriter(buff)
+	buff := new(bytes.Buffer)
+
+	gzw := gzip.NewWriter(buff)
+
+	mpw := multipart.NewWriter(gzw)
 
 	h := make(textproto.MIMEHeader)
 	h.Set("Content-Disposition", `form-data; name="file"; filename="imagename"`)
 	h.Set("Content-Type", "image/png")
 
-	part, err := w.CreatePart(h)
+	part, err := mpw.CreatePart(h)
 	if err != nil {
 		return "", err
 	}
@@ -390,14 +394,20 @@ func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 		return "", err
 	}
 
-	w.Close()
+	if err := mpw.Close(); err != nil {
+		return "", err
+	}
+
+	if err := gzw.Close(); err != nil {
+		return "", err
+	}
 
 	req, err := http.NewRequest(http.MethodPost, "http://objava-oglasa.bolha.com/include/imageUploaderProxy.php", buff)
 	if err != nil {
 		return "", err
 	}
 
-	headers := map[string]string{
+	for k, v := range map[string]string{
 		"Host":             "objava-oglasa.bolha.com",
 		"Connection":       "keep-alive",
 		"Pragma":           "no-cache",
@@ -409,12 +419,12 @@ func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 		"Referer":          fmt.Sprintf("http://objava-oglasa.bolha.com/oddaj.php?katid=%d&days=30", categoryId),
 		"Accept-Encoding":  "deflate",
 		"Accept-Language":  "en-US,en;q=0.9",
-	}
-	req.Header["MEDIA-ACTION"] = []string{"save-to-mrs"} // special case, TODO: check if it works lowercase
-	for k, v := range headers {
+		"Content-Encoding": "gzip, identity",
+		"Content-Type":     mpw.FormDataContentType(),
+		"MEDIA-ACTION":     "save-to-mrs",
+	} {
 		req.Header.Add(k, v)
 	}
-	req.Header.Set("Content-Type", w.FormDataContentType())
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
