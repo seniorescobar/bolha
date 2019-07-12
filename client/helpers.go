@@ -419,9 +419,9 @@ func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 		"Referer":          fmt.Sprintf("http://objava-oglasa.bolha.com/oddaj.php?katid=%d&days=30", categoryId),
 		"Accept-Encoding":  "deflate",
 		"Accept-Language":  "en-US,en;q=0.9",
-		"Content-Encoding": "gzip, identity",
-		"Content-Type":     mpw.FormDataContentType(),
-		"MEDIA-ACTION":     "save-to-mrs",
+		// "Content-Encoding": "gzip, identity",
+		"Content-Type": mpw.FormDataContentType(),
+		"MEDIA-ACTION": "save-to-mrs",
 	} {
 		req.Header.Add(k, v)
 	}
