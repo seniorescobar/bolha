@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,12 +25,78 @@ import (
 func (c *Client) uploadAd(ad *Ad) (int64, error) {
 	log.WithField("ad", ad).Info("uploading ad...")
 
-	metaInfo, err := c.getAdMetaInfo(ad)
-	if err != nil {
-		return 0, err
+	// TODO add context
+
+	var (
+		metaInfoChan = make(chan map[string]string, 1)
+		imgIdChan    = make(chan string, len(ad.Images))
+		errChan      = make(chan error)
+		doneChan     = make(chan struct{})
+	)
+
+	var wg sync.WaitGroup
+
+	// get meta data
+	go func() {
+		wg.Add(1)
+		defer wg.Done()
+
+		metaInfo, err := c.getAdMetaInfo(ad)
+		if err != nil {
+			errChan <- err
+			return
+		}
+
+		metaInfoChan <- metaInfo
+
+		close(metaInfoChan)
+	}()
+
+	// upload images
+	go func() {
+		wg.Add(1)
+		defer wg.Done()
+
+		for _, img := range ad.Images {
+			// TODO upload images concurrently
+			imgId, err := c.uploadImage(ad.CategoryId, img)
+			if err != nil {
+				errChan <- err
+				return
+			}
+
+			imgIdChan <- imgId
+		}
+
+		close(imgIdChan)
+	}()
+
+	go func() {
+		wg.Wait()
+		doneChan <- struct{}{}
+	}()
+
+	var (
+		imgIds   = make([]string, len(ad.Images))
+		metaInfo map[string]string
+	)
+
+	for {
+		select {
+		case imgId := <-imgIdChan:
+			imgIds = append(imgIds, imgId)
+
+		case metaInfo = <-metaInfoChan:
+
+		case err := <-errChan:
+			return 0, err
+
+		case <-doneChan:
+			return c.publishAd(ad, metaInfo, imgIds)
+		}
 	}
 
-	return c.publishAd(ad, metaInfo)
+	return 0, nil
 }
 
 func (c *Client) removeAds(ids []int64) error {
@@ -243,7 +310,13 @@ func (c *Client) getAdMetaInfo(ad *Ad) (map[string]string, error) {
 	}
 	defer gzReader.Close()
 
-	regex := map[string]*regexp.Regexp{
+	body, err := ioutil.ReadAll(gzReader)
+	if err != nil {
+		return nil, err
+	}
+
+	matches := make(map[string]string)
+	for k, r := range map[string]*regexp.Regexp{
 		"submitTakoj":         regexp.MustCompile(`<input type="hidden" name="submitTakoj" id="submitTakoj" value="(.*?)" />`),
 		"listItemId":          regexp.MustCompile(`<input type="hidden" name="listItemId" id="listItemId" value="(.*?)" />`),
 		"lPreverjeni":         regexp.MustCompile(`<input type="hidden" name="lPreverjeni" id="lPreverjeni" value="(.*?)" />`),
@@ -266,15 +339,7 @@ func (c *Client) getAdMetaInfo(ad *Ad) (map[string]string, error) {
 		"ukaz":                regexp.MustCompile(`<input style="display:none;" type="hidden" name="ukaz" value="(.*?)" />`),
 		"bShowForm":           regexp.MustCompile(`<input style="display:none;" type="hidden" name="bShowForm" id=bShowForm value="(.*?)" />`),
 		"lEdit":               regexp.MustCompile(`<input style="display:none;" type="hidden" name="lEdit" value="(.*?)" />`),
-	}
-
-	body, err := ioutil.ReadAll(gzReader)
-	if err != nil {
-		return nil, err
-	}
-
-	matches := make(map[string]string)
-	for k, r := range regex {
+	} {
 		m := r.FindSubmatch(body)
 		if m == nil {
 			return nil, errors.New("failed to get all meta data")
@@ -286,7 +351,7 @@ func (c *Client) getAdMetaInfo(ad *Ad) (map[string]string, error) {
 	return matches, nil
 }
 
-func (c *Client) publishAd(ad *Ad, metaInfo map[string]string) (int64, error) {
+func (c *Client) publishAd(ad *Ad, metaInfo map[string]string, imgIds []string) (int64, error) {
 	buff := &bytes.Buffer{}
 	w := multipart.NewWriter(buff)
 	defer w.Close()
@@ -313,13 +378,8 @@ func (c *Client) publishAd(ad *Ad, metaInfo map[string]string) (int64, error) {
 		}
 	}
 
-	// upload images
-	for _, img := range ad.Images {
-		imgId, err := c.uploadImage(ad.CategoryId, img)
-		if err != nil {
-			return 0, err
-		}
-
+	// images
+	for _, imgId := range imgIds {
 		if err := w.WriteField("images[][id]", imgId); err != nil {
 			return 0, err
 		}
