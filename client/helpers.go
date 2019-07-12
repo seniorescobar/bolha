@@ -2,7 +2,6 @@ package client
 
 import (
 	"bytes"
-	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
@@ -377,9 +376,10 @@ func (c *Client) publishAd(ad *Ad, metaInfo map[string]string) (int64, error) {
 func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 	buff := new(bytes.Buffer)
 
-	gzw := gzip.NewWriter(buff)
+	// gzw := gzip.NewWriter(buff)
 
-	mpw := multipart.NewWriter(gzw)
+	// mpw := multipart.NewWriter(gzw)
+	mpw := multipart.NewWriter(buff)
 
 	h := make(textproto.MIMEHeader)
 	h.Set("Content-Disposition", `form-data; name="file"; filename="imagename"`)
@@ -398,9 +398,9 @@ func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 		return "", err
 	}
 
-	if err := gzw.Close(); err != nil {
-		return "", err
-	}
+	// if err := gzw.Close(); err != nil {
+	// 	return "", err
+	// }
 
 	req, err := http.NewRequest(http.MethodPost, "http://objava-oglasa.bolha.com/include/imageUploaderProxy.php", buff)
 	if err != nil {
