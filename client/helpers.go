@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -430,6 +431,10 @@ func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 	id := make([]byte, 36)
 	res.Body.Read(make([]byte, 15))
 	res.Body.Read(id)
+
+	if _, err := uuid.ParseBytes(id); err != nil {
+		return "", fmt.Errorf(`invalid uuid %s`, string(id))
+	}
 
 	log.WithField("id", id).Info("extracted uploaded image id")
 
