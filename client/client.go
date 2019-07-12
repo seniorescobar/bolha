@@ -1,7 +1,7 @@
 package client
 
 import (
-	"image"
+	"io"
 	"net/http"
 )
 
@@ -23,7 +23,7 @@ type Ad struct {
 	Description string
 	Price       int
 	CategoryId  int
-	Images      []*image.Image
+	Images      []io.Reader
 }
 
 // ActiveAd represents an active (uploaded) ad from bolha.com

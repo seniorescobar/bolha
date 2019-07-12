@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"image"
-	_ "image/jpeg"
-	"image/png"
+	"io"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
@@ -375,7 +373,7 @@ func (c *Client) publishAd(ad *Ad, metaInfo map[string]string) (int64, error) {
 	return id, nil
 }
 
-func (c *Client) uploadImage(categoryId int, img *image.Image) (string, error) {
+func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 	buff := &bytes.Buffer{}
 	w := multipart.NewWriter(buff)
 
@@ -388,7 +386,7 @@ func (c *Client) uploadImage(categoryId int, img *image.Image) (string, error) {
 		return "", err
 	}
 
-	if err := png.Encode(part, *img); err != nil {
+	if _, err := io.Copy(part, img); err != nil {
 		return "", err
 	}
 
