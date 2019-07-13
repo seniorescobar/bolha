@@ -17,25 +17,28 @@ const (
 )
 
 type S3Client struct {
-	s3downloader *s3manager.Downloader
+	downloader *s3manager.Downloader
+	uploader   *s3manager.Uploader
 }
 
 func NewS3Client(sess *session.Session) *S3Client {
-	s3downloader := s3manager.NewDownloader(sess)
+	downloader := s3manager.NewDownloader(sess)
+	uploader := s3manager.NewUploader(sess)
 
 	return &S3Client{
-		s3downloader: s3downloader,
+		downloader: downloader,
+		uploader:   uploader,
 	}
 }
 
-func (s3client *S3Client) DownloadImage(imgPath string) (io.Reader, error) {
-	log.WithField("imgPath", imgPath).Info("downloading image from s3")
+func (s3Client *S3Client) DownloadImage(imgKey string) (io.Reader, error) {
+	log.WithField("imgKey", imgKey).Info("downloading image from s3")
 
 	buff := new(aws.WriteAtBuffer)
 
-	_, err := s3client.s3downloader.Download(buff, &s3.GetObjectInput{
+	_, err := s3Client.downloader.Download(buff, &s3.GetObjectInput{
 		Bucket: aws.String(s3ImagesBucket),
-		Key:    aws.String(imgPath),
+		Key:    aws.String(imgKey),
 	})
 	if err != nil {
 		return nil, err
@@ -44,4 +47,18 @@ func (s3client *S3Client) DownloadImage(imgPath string) (io.Reader, error) {
 	imgBytes := buff.Bytes()
 
 	return bytes.NewReader(imgBytes), nil
+}
+
+func (s3Client *S3Client) UploadImage(imgKey string, img io.Reader) error {
+	log.WithField("imgKey", imgKey).Info("uploading image to s3")
+
+	if _, err := s3Client.uploader.Upload(&s3manager.UploadInput{
+		Bucket: aws.String(s3ImagesBucket),
+		Key:    aws.String(imgKey),
+		Body:   img,
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
