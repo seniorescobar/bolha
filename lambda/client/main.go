@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"image"
+	"io"
 	"strconv"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -57,7 +57,7 @@ func Handler(ctx context.Context, event events.SQSEvent) error {
 
 			s3Client := common.NewS3Client(sess)
 
-			images := make([]*image.Image, len(ad.Images))
+			images := make([]io.Reader, len(ad.Images))
 			for i, imgPath := range ad.Images {
 				img, err := s3Client.DownloadImage(imgPath)
 				if err != nil {
