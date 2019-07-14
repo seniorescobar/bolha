@@ -447,8 +447,6 @@ func (c *Client) publishAd(ad *Ad, metaInfo map[string]string, imgIds []string) 
 func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 	log.Println("uploading image...")
 
-	start := time.Now()
-
 	buff := new(bytes.Buffer)
 
 	mpw := multipart.NewWriter(buff)
@@ -521,7 +519,6 @@ func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 		return "", fmt.Errorf(`invalid uuid %s`, idStr)
 	}
 
-	log.Info("elapsed", time.Since(start))
 	log.WithField("id", idStr).Info("extracted uploaded image id")
 
 	return idStr, nil
