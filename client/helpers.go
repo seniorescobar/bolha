@@ -101,6 +101,47 @@ func (c *Client) uploadAd(ad *Ad) (int64, error) {
 	return c.publishAd(ad, metaInfo)
 }
 
+func (c *Client) removeAd(id int64) error {
+	log.WithField("id", id).Info("removing ad...")
+
+	req, err := http.NewRequest(
+		http.MethodPost,
+		fmt.Sprintf("https://moja.bolha.com/adManager/ajaxRemoveActive/id/%d", id),
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	for k, v := range map[string]string{
+		"Accept":                    "application/json, text/javascript, */*; q=0.01",
+		"Accept-Encoding":           "gzip",
+		"Accept-Language":           "en-US,en;q=0.9,sl;q=0.8,hr;q=0.7",
+		"Cache-Control":             "max-age=0",
+		"Connection":                "keep-alive",
+		"User-Agent":                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36",
+		"Content-Type":              "application/x-www-form-urlencoded",
+		"Host":                      "moja.bolha.com",
+		"Origin":                    "https://moja.bolha.com",
+		"Referer":                   "https://moja.bolha.com/oglasi",
+		"Upgrade-Insecure-Requests": "1",
+		"X-Requested-With":          "XMLHttpRequest",
+	} {
+		req.Header.Set(k, v)
+	}
+
+	res, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		fmt.Errorf("erroring removing ad (StatusCode=%d)", res.StatusCode)
+	}
+
+	return err
+}
+
 func (c *Client) removeAds(ids []int64) error {
 	log.WithField("ids", ids).Info("removing ads...")
 
@@ -124,7 +165,7 @@ func (c *Client) removeAds(ids []int64) error {
 
 	for k, v := range map[string]string{
 		"Accept":                    "application/json, text/javascript, */*; q=0.01",
-		"Accept-Encoding":           "identity",
+		"Accept-Encoding":           "gzip",
 		"Accept-Language":           "en-US,en;q=0.9,sl;q=0.8,hr;q=0.7",
 		"Cache-Control":             "max-age=0",
 		"Connection":                "keep-alive",
@@ -424,8 +465,7 @@ func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 		"Referer":          fmt.Sprintf("http://objava-oglasa.bolha.com/oddaj.php?katid=%d&days=30", categoryId),
 		"Accept-Encoding":  "gzip",
 		"Accept-Language":  "en-US,en;q=0.9",
-
-		"Content-Type": mpw.FormDataContentType(),
+		"Content-Type":     mpw.FormDataContentType(),
 
 		"MEDIA-ACTION": "save-to-mrs",
 	} {

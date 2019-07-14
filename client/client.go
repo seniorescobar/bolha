@@ -73,7 +73,7 @@ func (c *Client) UploadAd(ad *Ad) (int64, error) {
 // REMOVE
 // RemoveAd removes a single ad provided by an id
 func (c *Client) RemoveAd(id int64) error {
-	return c.removeAds([]int64{id})
+	return c.removeAd(id)
 }
 
 // RemoveAds removes multiple ads provided by ids
