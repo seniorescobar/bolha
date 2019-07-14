@@ -21,59 +21,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (c *Client) uploadAd(ad *Ad) (int64, error) {
-	log.WithField("ad", ad).Info("uploading ad...")
-
-	metaInfo, err := c.getAdMetaInfo(ad)
-	if err != nil {
-		return 0, err
-	}
-
-	return c.publishAd(ad, metaInfo)
-}
-
-func (c *Client) removeAds(ids []int64) error {
-	if len(ids) == 0 {
-		log.Info("no ads to remove")
-		return nil
-	}
-
-	log.WithField("ids", ids).Info("removing ads...")
-
-	sIds := make([]string, len(ids))
-	for i, id := range ids {
-		sIds[i] = strconv.FormatInt(id, 10)
-	}
-
-	values := url.Values{
-		"IDS": {
-			strings.Join(sIds, ","),
-		},
-	}
-
-	req, err := http.NewRequest(http.MethodPost, "https://moja.bolha.com/adManager/ajaxRemoveActiveBulk", strings.NewReader(values.Encode()))
-	if err != nil {
-		return err
-	}
-
-	overwrite := map[string]string{
-		"Content-Type":              "application/x-www-form-urlencoded",
-		"Host":                      "moja.bolha.com",
-		"Origin":                    "https://moja.bolha.com",
-		"Referer":                   "https://moja.bolha.com/oglasi",
-		"Upgrade-Insecure-Requests": "1",
-		"X-Requested-With":          "XMLHttpRequest",
-	}
-	headers := getDefaultHeaders(overwrite)
-
-	for k, v := range headers {
-		req.Header.Set(k, v)
-	}
-
-	_, err = c.httpClient.Do(req)
-	return err
-}
-
 func getHttpClient() (*http.Client, error) {
 	cookieJar, err := cookiejar.New(nil)
 	if err != nil {
@@ -97,24 +44,28 @@ func (c *Client) allowRedirects(allow bool) {
 }
 
 func (c *Client) login(u *User) error {
-	values := url.Values{
-		"username": {
-			u.Username,
-		},
-		"password": {
-			u.Password,
-		},
-		"rememberMe": {
-			"true",
-		},
-	}
-
-	req, err := http.NewRequest(http.MethodPost, "https://login.bolha.com/auth.php", strings.NewReader(values.Encode()))
+	req, err := http.NewRequest(
+		http.MethodPost,
+		"https://login.bolha.com/auth.php",
+		strings.NewReader(
+			url.Values{
+				"username":   {u.Username},
+				"password":   {u.Password},
+				"rememberMe": {"true"},
+			}.Encode(),
+		),
+	)
 	if err != nil {
 		return err
 	}
 
-	overwrite := map[string]string{
+	for k, v := range map[string]string{
+		"Accept":                    "application/json, text/javascript, */*; q=0.01",
+		"Accept-Encoding":           "identity",
+		"Accept-Language":           "en-US,en;q=0.9,sl;q=0.8,hr;q=0.7",
+		"Cache-Control":             "max-age=0",
+		"Connection":                "keep-alive",
+		"User-Agent":                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36",
 		"Content-Type":              "application/x-www-form-urlencoded",
 		"Host":                      "login.bolha.com",
 		"Origin":                    "http://www.bolha.com",
@@ -122,10 +73,7 @@ func (c *Client) login(u *User) error {
 		"Upgrade-Insecure-Requests": "1",
 		"X-Requested-With":          "XMLHttpRequest",
 		"X-Site":                    "http://www.bolha.com/",
-	}
-	headers := getDefaultHeaders(overwrite)
-
-	for k, v := range headers {
+	} {
 		req.Header.Add(k, v)
 	}
 
@@ -142,19 +90,76 @@ func (c *Client) login(u *User) error {
 	return nil
 }
 
+func (c *Client) uploadAd(ad *Ad) (int64, error) {
+	log.WithField("ad", ad).Info("uploading ad...")
+
+	metaInfo, err := c.getAdMetaInfo(ad)
+	if err != nil {
+		return 0, err
+	}
+
+	return c.publishAd(ad, metaInfo)
+}
+
+func (c *Client) removeAds(ids []int64) error {
+	log.WithField("ids", ids).Info("removing ads...")
+
+	sIds := make([]string, len(ids))
+	for i, id := range ids {
+		sIds[i] = strconv.FormatInt(id, 10)
+	}
+
+	req, err := http.NewRequest(
+		http.MethodPost,
+		"https://moja.bolha.com/adManager/ajaxRemoveActiveBulk",
+		strings.NewReader(
+			url.Values{
+				"IDS": {strings.Join(sIds, ",")},
+			}.Encode(),
+		),
+	)
+	if err != nil {
+		return err
+	}
+
+	for k, v := range map[string]string{
+		"Accept":                    "application/json, text/javascript, */*; q=0.01",
+		"Accept-Encoding":           "identity",
+		"Accept-Language":           "en-US,en;q=0.9,sl;q=0.8,hr;q=0.7",
+		"Cache-Control":             "max-age=0",
+		"Connection":                "keep-alive",
+		"User-Agent":                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36",
+		"Content-Type":              "application/x-www-form-urlencoded",
+		"Host":                      "moja.bolha.com",
+		"Origin":                    "https://moja.bolha.com",
+		"Referer":                   "https://moja.bolha.com/oglasi",
+		"Upgrade-Insecure-Requests": "1",
+		"X-Requested-With":          "XMLHttpRequest",
+	} {
+		req.Header.Set(k, v)
+	}
+
+	// TODO check resp status code
+	_, err = c.httpClient.Do(req)
+	return err
+}
+
 func (c *Client) getActiveAds() ([]*ActiveAd, error) {
 	req, err := http.NewRequest(http.MethodGet, "https://moja.bolha.com/oglasi", nil)
 	if err != nil {
 		return nil, err
 	}
 
-	overwrite := map[string]string{
+	for k, v := range map[string]string{
+		"Accept":                    "application/json, text/javascript, */*; q=0.01",
+		"Accept-Encoding":           "gzip",
+		"Accept-Language":           "en-US,en;q=0.9,sl;q=0.8,hr;q=0.7",
+		"Cache-Control":             "max-age=0",
+		"Connection":                "keep-alive",
+		"User-Agent":                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36",
 		"Host":                      "moja.bolha.com",
 		"Upgrade-Insecure-Requests": "1",
-	}
-	headers := getDefaultHeaders(overwrite)
-
-	for k, v := range headers {
+	} {
 		req.Header.Add(k, v)
 	}
 
@@ -164,7 +169,13 @@ func (c *Client) getActiveAds() ([]*ActiveAd, error) {
 	}
 	defer res.Body.Close()
 
-	body, err := ioutil.ReadAll(res.Body)
+	gzReader, err := gzip.NewReader(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	defer gzReader.Close()
+
+	body, err := ioutil.ReadAll(gzReader)
 	if err != nil {
 		return nil, err
 	}
@@ -334,16 +345,18 @@ func (c *Client) publishAd(ad *Ad, metaInfo map[string]string) (int64, error) {
 		return 0, err
 	}
 
-	overwrite := map[string]string{
+	for k, v := range map[string]string{
+		"Accept":                    "application/json, text/javascript, */*; q=0.01",
+		"Accept-Encoding":           "identity",
+		"Accept-Language":           "en-US,en;q=0.9,sl;q=0.8,hr;q=0.7",
+		"Cache-Control":             "max-age=0",
+		"Connection":                "keep-alive",
+		"User-Agent":                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36",
 		"Host":                      "objava-oglasa.bolha.com",
 		"Origin":                    "http://objava-oglasa.bolha.com",
 		"Referer":                   fmt.Sprintf("http://objava-oglasa.bolha.com/oddaj.php?katid=%d&days=30", ad.CategoryId),
 		"Upgrade-Insecure-Requests": "1",
-	}
-
-	headers := getDefaultHeaders(overwrite)
-
-	for k, v := range headers {
+	} {
 		req.Header.Add(k, v)
 	}
 
@@ -447,21 +460,4 @@ func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 	log.WithField("id", idStr).Info("extracted uploaded image id")
 
 	return idStr, nil
-}
-
-func getDefaultHeaders(overwrite map[string]string) map[string]string {
-	headers := map[string]string{
-		"Accept":          "application/json, text/javascript, */*; q=0.01",
-		"Accept-Encoding": "identity",
-		"Accept-Language": "en-US,en;q=0.9,sl;q=0.8,hr;q=0.7",
-		"Cache-Control":   "max-age=0",
-		"Connection":      "keep-alive",
-		"User-Agent":      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36",
-	}
-
-	for k, v := range overwrite {
-		headers[k] = v
-	}
-
-	return headers
 }
