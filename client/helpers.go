@@ -298,28 +298,28 @@ func (c *Client) getAdMetaInfo(ad *Ad) (map[string]string, error) {
 }
 
 func (c *Client) publishAd(ad *Ad, metaInfo map[string]string) (int64, error) {
-	buff := &bytes.Buffer{}
-	w := multipart.NewWriter(buff)
-	defer w.Close()
+	buff := new(bytes.Buffer)
+
+	mpw := multipart.NewWriter(buff)
+	defer mpw.Close()
 
 	// write meta info
 	for k, v := range metaInfo {
-		err := w.WriteField(k, v)
+		err := mpw.WriteField(k, v)
 		if err != nil {
 			return 0, err
 		}
 	}
 
 	// write visible ad fields
-	params := map[string]string{
+	for k, v := range map[string]string{
 		"cNaziv":     ad.Title,
 		"cOpis":      ad.Description,
 		"nCenaStart": strconv.Itoa(ad.Price),
 		"nKatID":     strconv.Itoa(ad.CategoryId),
 		"cTip":       "O",
-	}
-	for k, v := range params {
-		if err := w.WriteField(k, v); err != nil {
+	} {
+		if err := mpw.WriteField(k, v); err != nil {
 			return 0, err
 		}
 	}
@@ -331,11 +331,11 @@ func (c *Client) publishAd(ad *Ad, metaInfo map[string]string) (int64, error) {
 			return 0, err
 		}
 
-		if err := w.WriteField("images[][id]", imgId); err != nil {
+		if err := mpw.WriteField("images[][id]", imgId); err != nil {
 			return 0, err
 		}
 
-		if err := w.WriteField("izd_slike_order[]", imgId); err != nil {
+		if err := mpw.WriteField("izd_slike_order[]", imgId); err != nil {
 			return 0, err
 		}
 	}
@@ -347,7 +347,7 @@ func (c *Client) publishAd(ad *Ad, metaInfo map[string]string) (int64, error) {
 
 	for k, v := range map[string]string{
 		"Accept":                    "application/json, text/javascript, */*; q=0.01",
-		"Accept-Encoding":           "identity",
+		"Accept-Encoding":           "gzip",
 		"Accept-Language":           "en-US,en;q=0.9,sl;q=0.8,hr;q=0.7",
 		"Cache-Control":             "max-age=0",
 		"Connection":                "keep-alive",
@@ -356,39 +356,31 @@ func (c *Client) publishAd(ad *Ad, metaInfo map[string]string) (int64, error) {
 		"Origin":                    "http://objava-oglasa.bolha.com",
 		"Referer":                   fmt.Sprintf("http://objava-oglasa.bolha.com/oddaj.php?katid=%d&days=30", ad.CategoryId),
 		"Upgrade-Insecure-Requests": "1",
+		"Content-Type":              mpw.FormDataContentType(),
 	} {
 		req.Header.Add(k, v)
 	}
 
-	req.Header.Set("Content-Type", w.FormDataContentType())
-
-	c.allowRedirects(true)
+	c.allowRedirects(false)
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return 0, err
 	}
-	defer res.Body.Close()
+	res.Body.Close()
 
-	if res.StatusCode != http.StatusOK {
+	if res.StatusCode != http.StatusFound {
 		return 0, errors.New("error publishing ad")
 	}
 
-	resBody, err := ioutil.ReadAll(res.Body)
+	// perf hack
+	// different approach would be to call res.Location() and parse query params
+	loc := res.Header.Get("Location")
+	id, err := strconv.ParseInt(loc[20:30], 10, 64)
 	if err != nil {
 		return 0, err
 	}
-
-	m := regexp.MustCompile(`<input type="hidden" id="adid" name="adid" value="(\d+)" />`).FindStringSubmatch(string(resBody))
-
-	if len(m) != 2 {
-		return 0, errors.New("error extracting id")
-	}
-
-	id, err := strconv.ParseInt(m[1], 10, 64)
-	if err != nil {
-		return 0, err
-	}
+	log.WithField("id", id).Info("extracted uploaded ad id")
 
 	return id, nil
 }
@@ -430,7 +422,7 @@ func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 		"Accept":           "*/*",
 		"X-Requested-With": "XMLHttpRequest",
 		"Referer":          fmt.Sprintf("http://objava-oglasa.bolha.com/oddaj.php?katid=%d&days=30", categoryId),
-		"Accept-Encoding":  "deflate",
+		"Accept-Encoding":  "gzip",
 		"Accept-Language":  "en-US,en;q=0.9",
 
 		"Content-Type": mpw.FormDataContentType(),
@@ -446,10 +438,16 @@ func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 	}
 	defer res.Body.Close()
 
+	gzr, err := gzip.NewReader(res.Body)
+	if err != nil {
+		return "", err
+	}
+	defer gzr.Close()
+
 	// perf hack, uuid is 35 chars long
 	id := make([]byte, 36)
-	res.Body.Read(make([]byte, 15))
-	res.Body.Read(id)
+	gzr.Read(make([]byte, 15))
+	gzr.Read(id)
 
 	idStr := string(id)
 
