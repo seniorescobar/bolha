@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -93,12 +94,32 @@ func (c *Client) login(u *User) error {
 func (c *Client) uploadAd(ad *Ad) (int64, error) {
 	log.WithField("ad", ad).Info("uploading ad...")
 
-	metaInfo, err := c.getAdMetaInfo(ad)
-	if err != nil {
-		return 0, err
+	var wg sync.WaitGroup
+
+	// TODO handle errors
+
+	var metaInfo map[string]string
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		mi, _ := c.getAdMetaInfo(ad)
+		metaInfo = mi
+	}()
+
+	imgIds := make([]string, len(ad.Images))
+	for i, img := range ad.Images {
+		wg.Add(1)
+		i1, img1 := i, img
+		go func(i int, img io.Reader) {
+			defer wg.Done()
+			imgId, _ := c.uploadImage(ad.CategoryId, img1)
+			imgIds[i1] = imgId
+		}(i1, img1)
 	}
 
-	return c.publishAd(ad, metaInfo)
+	wg.Wait()
+
+	return c.publishAd(ad, metaInfo, imgIds)
 }
 
 func (c *Client) removeAd(id int64) error {
@@ -335,10 +356,12 @@ func (c *Client) getAdMetaInfo(ad *Ad) (map[string]string, error) {
 		matches[k] = string(m[1])
 	}
 
+	log.Info("extracted ad meta info")
+
 	return matches, nil
 }
 
-func (c *Client) publishAd(ad *Ad, metaInfo map[string]string) (int64, error) {
+func (c *Client) publishAd(ad *Ad, metaInfo map[string]string, imgIds []string) (int64, error) {
 	buff := new(bytes.Buffer)
 
 	mpw := multipart.NewWriter(buff)
@@ -366,12 +389,7 @@ func (c *Client) publishAd(ad *Ad, metaInfo map[string]string) (int64, error) {
 	}
 
 	// upload images
-	for _, img := range ad.Images {
-		imgId, err := c.uploadImage(ad.CategoryId, img)
-		if err != nil {
-			return 0, err
-		}
-
+	for _, imgId := range imgIds {
 		if err := mpw.WriteField("images[][id]", imgId); err != nil {
 			return 0, err
 		}
@@ -427,6 +445,10 @@ func (c *Client) publishAd(ad *Ad, metaInfo map[string]string) (int64, error) {
 }
 
 func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
+	log.Println("uploading image...")
+
+	start := time.Now()
+
 	buff := new(bytes.Buffer)
 
 	mpw := multipart.NewWriter(buff)
@@ -478,6 +500,10 @@ func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 	}
 	defer res.Body.Close()
 
+	if res.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("error uploading image, status code = %d", res.StatusCode)
+	}
+
 	gzr, err := gzip.NewReader(res.Body)
 	if err != nil {
 		return "", err
@@ -495,6 +521,7 @@ func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 		return "", fmt.Errorf(`invalid uuid %s`, idStr)
 	}
 
+	log.Info("elapsed", time.Since(start))
 	log.WithField("id", idStr).Info("extracted uploaded image id")
 
 	return idStr, nil
