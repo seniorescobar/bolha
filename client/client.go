@@ -90,6 +90,11 @@ func (c *Client) GetActiveAds() ([]*ActiveAd, error) {
 	return c.getActiveAds()
 }
 
+// GetActiveAd returns active ad
+func (c *Client) GetActiveAd(id int64) (*ActiveAd, error) {
+	return c.getActiveAd(id)
+}
+
 // UPLOAD
 // UploadAd uploads a single ad
 func (c *Client) UploadAd(ad *Ad) (int64, error) {

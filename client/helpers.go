@@ -251,6 +251,57 @@ func (c *Client) getActiveAds() ([]*ActiveAd, error) {
 	return ads, nil
 }
 
+func (c *Client) getActiveAd(id int64) (*ActiveAd, error) {
+	req, err := http.NewRequest(http.MethodGet, "https://moja.bolha.com/oglasi", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range map[string]string{
+		"Accept-Encoding": "gzip",
+		"User-Agent":      userAgent,
+		"Host":            "moja.bolha.com",
+	} {
+		req.Header.Add(k, v)
+	}
+
+	res, err := c.doWithSessionCookie(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	gzReader, err := gzip.NewReader(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	defer gzReader.Close()
+
+	body, err := ioutil.ReadAll(gzReader)
+	if err != nil {
+		return nil, err
+	}
+
+	r, err := regexp.Compile(fmt.Sprintf(`Šifra oglasa: %d.*?<span>(\d+)<\/span><a .*?>Skok na vrh<\/a>`, id))
+	if err != nil {
+		return nil, err
+	}
+
+	m := r.FindSubmatch(body)
+
+	orderI, err := strconv.ParseInt(string(m[1]), 10, 32)
+	if err != nil {
+		return nil, err
+	}
+
+	ad := &ActiveAd{
+		Id:    id,
+		Order: int(orderI),
+	}
+
+	return ad, nil
+}
+
 func (c *Client) getAdMetaData(ad *Ad) (map[string]string, error) {
 	req, err := http.NewRequest(
 		http.MethodPost,
