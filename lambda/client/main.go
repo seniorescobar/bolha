@@ -14,8 +14,6 @@ import (
 	"github.com/seniorescobar/bolha/client"
 	"github.com/seniorescobar/bolha/db/postgres"
 	"github.com/seniorescobar/bolha/lambda/common"
-
-	_ "image/jpeg"
 )
 
 func Handler(ctx context.Context, event events.SQSEvent) error {
