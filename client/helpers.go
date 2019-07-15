@@ -9,30 +9,24 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
-	"net/http/cookiejar"
 	"net/textproto"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 )
 
-func getHttpClient() (*http.Client, error) {
-	cookieJar, err := cookiejar.New(nil)
-	if err != nil {
-		return nil, err
-	}
+const (
+	userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36"
+)
 
-	return &http.Client{
-		Timeout: time.Duration(3) * time.Minute,
-		Jar:     cookieJar,
-	}, nil
-}
+var (
+	activeAdsRegex = regexp.MustCompile(`Šifra oglasa: (\d+).*?<span>(\d+)<\/span><a .*?>Skok na vrh<\/a>`)
+)
 
 func (c *Client) allowRedirects(allow bool) {
 	if allow {
@@ -44,7 +38,7 @@ func (c *Client) allowRedirects(allow bool) {
 	}
 }
 
-func (c *Client) login(u *User) error {
+func (c *Client) login(u *User) (string, error) {
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"https://login.bolha.com/auth.php",
@@ -57,38 +51,45 @@ func (c *Client) login(u *User) error {
 		),
 	)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	for k, v := range map[string]string{
-		"Accept":                    "application/json, text/javascript, */*; q=0.01",
-		"Accept-Encoding":           "identity",
-		"Accept-Language":           "en-US,en;q=0.9,sl;q=0.8,hr;q=0.7",
-		"Cache-Control":             "max-age=0",
-		"Connection":                "keep-alive",
-		"User-Agent":                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36",
-		"Content-Type":              "application/x-www-form-urlencoded",
-		"Host":                      "login.bolha.com",
-		"Origin":                    "http://www.bolha.com",
-		"Referer":                   "http://www.bolha.com/",
-		"Upgrade-Insecure-Requests": "1",
-		"X-Requested-With":          "XMLHttpRequest",
-		"X-Site":                    "http://www.bolha.com/",
+		"Accept-Encoding":  "gzip",
+		"User-Agent":       userAgent,
+		"Content-Type":     "application/x-www-form-urlencoded",
+		"Host":             "login.bolha.com",
+		"Origin":           "http://www.bolha.com",
+		"Referer":          "http://www.bolha.com/",
+		"X-Requested-With": "XMLHttpRequest",
+		"X-Site":           "http://www.bolha.com/",
 	} {
 		req.Header.Add(k, v)
 	}
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode == http.StatusUnauthorized {
-		return fmt.Errorf("login failed for '%s'", u.Username)
+		return "", fmt.Errorf("login failed for '%s'", u.Username)
 	}
 
-	return nil
+	var sessionId string
+	for _, cookie := range res.Cookies() {
+		if cookie.Name == "BOLHA_SSID" {
+			sessionId = cookie.Value
+			break
+		}
+	}
+
+	if sessionId == "" {
+		return "", errors.New("session cookie not found")
+	}
+
+	return sessionId, nil
 }
 
 func (c *Client) uploadAd(ad *Ad) (int64, error) {
@@ -98,12 +99,12 @@ func (c *Client) uploadAd(ad *Ad) (int64, error) {
 
 	// TODO handle errors
 
-	var metaInfo map[string]string
+	var metaData map[string]string
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		mi, _ := c.getAdMetaInfo(ad)
-		metaInfo = mi
+		mi, _ := c.getAdMetaData(ad)
+		metaData = mi
 	}()
 
 	imgIds := make([]string, len(ad.Images))
@@ -119,7 +120,7 @@ func (c *Client) uploadAd(ad *Ad) (int64, error) {
 
 	wg.Wait()
 
-	return c.publishAd(ad, metaInfo, imgIds)
+	return c.publishAd(ad, metaData, imgIds)
 }
 
 func (c *Client) removeAd(id int64) error {
@@ -135,23 +136,18 @@ func (c *Client) removeAd(id int64) error {
 	}
 
 	for k, v := range map[string]string{
-		"Accept":                    "application/json, text/javascript, */*; q=0.01",
-		"Accept-Encoding":           "gzip",
-		"Accept-Language":           "en-US,en;q=0.9,sl;q=0.8,hr;q=0.7",
-		"Cache-Control":             "max-age=0",
-		"Connection":                "keep-alive",
-		"User-Agent":                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36",
-		"Content-Type":              "application/x-www-form-urlencoded",
-		"Host":                      "moja.bolha.com",
-		"Origin":                    "https://moja.bolha.com",
-		"Referer":                   "https://moja.bolha.com/oglasi",
-		"Upgrade-Insecure-Requests": "1",
-		"X-Requested-With":          "XMLHttpRequest",
+		"Accept-Encoding":  "gzip",
+		"User-Agent":       userAgent,
+		"Content-Type":     "application/x-www-form-urlencoded",
+		"Host":             "moja.bolha.com",
+		"Origin":           "https://moja.bolha.com",
+		"Referer":          "https://moja.bolha.com/oglasi",
+		"X-Requested-With": "XMLHttpRequest",
 	} {
 		req.Header.Set(k, v)
 	}
 
-	res, err := c.httpClient.Do(req)
+	res, err := c.doWithSessionCookie(req)
 	if err != nil {
 		return err
 	}
@@ -185,23 +181,19 @@ func (c *Client) removeAds(ids []int64) error {
 	}
 
 	for k, v := range map[string]string{
-		"Accept":                    "application/json, text/javascript, */*; q=0.01",
-		"Accept-Encoding":           "gzip",
-		"Accept-Language":           "en-US,en;q=0.9,sl;q=0.8,hr;q=0.7",
-		"Cache-Control":             "max-age=0",
-		"Connection":                "keep-alive",
-		"User-Agent":                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36",
-		"Content-Type":              "application/x-www-form-urlencoded",
-		"Host":                      "moja.bolha.com",
-		"Origin":                    "https://moja.bolha.com",
-		"Referer":                   "https://moja.bolha.com/oglasi",
-		"Upgrade-Insecure-Requests": "1",
-		"X-Requested-With":          "XMLHttpRequest",
+		"Accept-Encoding":  "gzip",
+		"User-Agent":       userAgent,
+		"Content-Type":     "application/x-www-form-urlencoded",
+		"Host":             "moja.bolha.com",
+		"Origin":           "https://moja.bolha.com",
+		"Referer":          "https://moja.bolha.com/oglasi",
+		"X-Requested-With": "XMLHttpRequest",
 	} {
 		req.Header.Set(k, v)
 	}
 
-	// TODO check resp status code
+	// FIXME bolha sends 500 event if ads are removed
+	// ignore status code for now, not critical
 	_, err = c.httpClient.Do(req)
 	return err
 }
@@ -213,19 +205,14 @@ func (c *Client) getActiveAds() ([]*ActiveAd, error) {
 	}
 
 	for k, v := range map[string]string{
-		"Accept":                    "application/json, text/javascript, */*; q=0.01",
-		"Accept-Encoding":           "gzip",
-		"Accept-Language":           "en-US,en;q=0.9,sl;q=0.8,hr;q=0.7",
-		"Cache-Control":             "max-age=0",
-		"Connection":                "keep-alive",
-		"User-Agent":                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36",
-		"Host":                      "moja.bolha.com",
-		"Upgrade-Insecure-Requests": "1",
+		"Accept-Encoding": "gzip",
+		"User-Agent":      userAgent,
+		"Host":            "moja.bolha.com",
 	} {
 		req.Header.Add(k, v)
 	}
 
-	res, err := c.httpClient.Do(req)
+	res, err := c.doWithSessionCookie(req)
 	if err != nil {
 		return nil, err
 	}
@@ -242,22 +229,15 @@ func (c *Client) getActiveAds() ([]*ActiveAd, error) {
 		return nil, err
 	}
 
-	var (
-		mId    = regexp.MustCompile(`Šifra oglasa: (\d+)`).FindAllStringSubmatch(string(body), -1)
-		mOrder = regexp.MustCompile(`<span>(\d+)<\/span><a .*>Skok na vrh<\/a>`).FindAllStringSubmatch(string(body), -1)
-	)
+	m := activeAdsRegex.FindAllSubmatch(body, -1)
 
-	if len(mId) != len(mOrder) {
-		return nil, errors.New("regex matches len does not match")
-	}
-
-	ads := make([]*ActiveAd, len(mId))
-	for i := range mId {
-		idI, err := strconv.ParseInt(mId[i][1], 10, 64)
+	ads := make([]*ActiveAd, len(m))
+	for i := range m {
+		idI, err := strconv.ParseInt(string(m[i][1]), 10, 64)
 		if err != nil {
 			return nil, err
 		}
-		orderI, err := strconv.ParseInt(mOrder[i][1], 10, 32)
+		orderI, err := strconv.ParseInt(string(m[i][2]), 10, 32)
 		if err != nil {
 			return nil, err
 		}
@@ -271,30 +251,25 @@ func (c *Client) getActiveAds() ([]*ActiveAd, error) {
 	return ads, nil
 }
 
-func (c *Client) getAdMetaInfo(ad *Ad) (map[string]string, error) {
-	values := url.Values{
-		"categoryId": {
-			strconv.Itoa(ad.CategoryId),
-		},
-	}
-
-	req, err := http.NewRequest(http.MethodPost, "http://objava-oglasa.bolha.com/izbor_paketa.php", strings.NewReader(values.Encode()))
+func (c *Client) getAdMetaData(ad *Ad) (map[string]string, error) {
+	req, err := http.NewRequest(
+		http.MethodPost,
+		"http://objava-oglasa.bolha.com/izbor_paketa.php",
+		strings.NewReader(
+			url.Values{"categoryId": {strconv.Itoa(ad.CategoryId)}}.Encode(),
+		),
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	for k, v := range map[string]string{
-		"Content-Type":              "application/x-www-form-urlencoded",
-		"Host":                      "objava-oglasa.bolha.com",
-		"Origin":                    "http://objava-oglasa.bolha.com",
-		"Referer":                   "http://objava-oglasa.bolha.com/",
-		"Upgrade-Insecure-Requests": "1",
-		"Accept":                    "application/json, text/javascript, */*; q=0.01",
-		"Accept-Encoding":           "gzip",
-		"Accept-Language":           "en-US,en;q=0.9,sl;q=0.8,hr;q=0.7",
-		"Cache-Control":             "max-age=0",
-		"Connection":                "keep-alive",
-		"User-Agent":                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36",
+		"Content-Type":    "application/x-www-form-urlencoded",
+		"Host":            "objava-oglasa.bolha.com",
+		"Origin":          "http://objava-oglasa.bolha.com",
+		"Referer":         "http://objava-oglasa.bolha.com/",
+		"Accept-Encoding": "gzip",
+		"User-Agent":      userAgent,
 	} {
 		req.Header.Add(k, v)
 	}
@@ -304,7 +279,7 @@ func (c *Client) getAdMetaInfo(ad *Ad) (map[string]string, error) {
 		c.allowRedirects(false)
 	}()
 
-	res, err := c.httpClient.Do(req)
+	res, err := c.doWithSessionCookie(req)
 	if err != nil {
 		return nil, err
 	}
@@ -361,14 +336,14 @@ func (c *Client) getAdMetaInfo(ad *Ad) (map[string]string, error) {
 	return matches, nil
 }
 
-func (c *Client) publishAd(ad *Ad, metaInfo map[string]string, imgIds []string) (int64, error) {
+func (c *Client) publishAd(ad *Ad, metaData map[string]string, imgIds []string) (int64, error) {
 	buff := new(bytes.Buffer)
 
 	mpw := multipart.NewWriter(buff)
 	defer mpw.Close()
 
 	// write meta info
-	for k, v := range metaInfo {
+	for k, v := range metaData {
 		err := mpw.WriteField(k, v)
 		if err != nil {
 			return 0, err
@@ -405,24 +380,17 @@ func (c *Client) publishAd(ad *Ad, metaInfo map[string]string, imgIds []string) 
 	}
 
 	for k, v := range map[string]string{
-		"Accept":                    "application/json, text/javascript, */*; q=0.01",
-		"Accept-Encoding":           "gzip",
-		"Accept-Language":           "en-US,en;q=0.9,sl;q=0.8,hr;q=0.7",
-		"Cache-Control":             "max-age=0",
-		"Connection":                "keep-alive",
-		"User-Agent":                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36",
-		"Host":                      "objava-oglasa.bolha.com",
-		"Origin":                    "http://objava-oglasa.bolha.com",
-		"Referer":                   fmt.Sprintf("http://objava-oglasa.bolha.com/oddaj.php?katid=%d&days=30", ad.CategoryId),
-		"Upgrade-Insecure-Requests": "1",
-		"Content-Type":              mpw.FormDataContentType(),
+		"Accept-Encoding": "gzip",
+		"User-Agent":      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36",
+		"Host":            "objava-oglasa.bolha.com",
+		"Origin":          "http://objava-oglasa.bolha.com",
+		"Referer":         fmt.Sprintf("http://objava-oglasa.bolha.com/oddaj.php?katid=%d&days=30", ad.CategoryId),
+		"Content-Type":    mpw.FormDataContentType(),
 	} {
 		req.Header.Add(k, v)
 	}
 
-	c.allowRedirects(false)
-
-	res, err := c.httpClient.Do(req)
+	res, err := c.doWithSessionCookie(req)
 	if err != nil {
 		return 0, err
 	}
@@ -474,17 +442,12 @@ func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 	}
 
 	for k, v := range map[string]string{
+		"Accept-Encoding":  "gzip",
 		"Host":             "objava-oglasa.bolha.com",
-		"Connection":       "keep-alive",
-		"Pragma":           "no-cache",
-		"Cache-Control":    "no-cache",
 		"Origin":           "http://objava-oglasa.bolha.com",
-		"User-Agent":       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36",
-		"Accept":           "*/*",
+		"User-Agent":       userAgent,
 		"X-Requested-With": "XMLHttpRequest",
 		"Referer":          fmt.Sprintf("http://objava-oglasa.bolha.com/oddaj.php?katid=%d&days=30", categoryId),
-		"Accept-Encoding":  "gzip",
-		"Accept-Language":  "en-US,en;q=0.9",
 		"Content-Type":     mpw.FormDataContentType(),
 
 		"MEDIA-ACTION": "save-to-mrs",
@@ -492,7 +455,7 @@ func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 		req.Header.Add(k, v)
 	}
 
-	res, err := c.httpClient.Do(req)
+	res, err := c.doWithSessionCookie(req)
 	if err != nil {
 		return "", err
 	}
@@ -522,4 +485,15 @@ func (c *Client) uploadImage(categoryId int, img io.Reader) (string, error) {
 	log.WithField("id", idStr).Info("extracted uploaded image id")
 
 	return idStr, nil
+}
+
+func (c *Client) doWithSessionCookie(req *http.Request) (*http.Response, error) {
+	req.AddCookie(&http.Cookie{
+		Name:   "BOLHA_SSID",
+		Value:  c.sessionId,
+		Path:   "/",
+		Domain: ".bolha.com",
+	})
+
+	return c.httpClient.Do(req)
 }

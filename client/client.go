@@ -3,6 +3,8 @@ package client
 import (
 	"io"
 	"net/http"
+	"net/http/cookiejar"
+	"time"
 )
 
 // Record represents a record consisting of user and ads
@@ -36,23 +38,47 @@ type ActiveAd struct {
 // Client represents a bolha client
 type Client struct {
 	httpClient *http.Client
+	sessionId  string
 }
 
 // New creates a new bolha client
 func New(u *User) (*Client, error) {
-	httpClient, err := getHttpClient()
+	cookieJar, err := cookiejar.New(nil)
 	if err != nil {
 		return nil, err
 	}
 
 	client := &Client{
-		httpClient: httpClient,
+		httpClient: &http.Client{
+			Timeout: time.Duration(3) * time.Minute,
+			Jar:     cookieJar,
+		},
 	}
 
 	client.allowRedirects(false)
 
-	if err := client.login(u); err != nil {
+	sessionId, err := client.login(u)
+	if err != nil {
 		return nil, err
+	}
+	client.sessionId = sessionId
+
+	return client, nil
+}
+
+// New creates a new bolha client with BOLHA_SSID
+func NewWithSessionId(sessionId string) (*Client, error) {
+	httpClient := &http.Client{
+		Timeout: time.Duration(3) * time.Minute,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	// TODO use cookieJar with BOLHA_SSID cookie, ignore set-cookie from response
+	client := &Client{
+		httpClient: httpClient,
+		sessionId:  sessionId,
 	}
 
 	return client, nil
