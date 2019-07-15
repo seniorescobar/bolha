@@ -265,7 +265,7 @@ func (pdb *PostgresDB) RemoveUploadedAd(ctx context.Context, uploadedAdId int64)
 
 func (pdb *PostgresDB) GetUploadedAt(ctx context.Context, uploadedAdId int64) (time.Time, error) {
 	var uploadedAt time.Time
-	if err := pdb.db.QueryRowContext(ctx, `SELECT "uploaded_at" FROM "uploaded_ad" WHERE "uploaded_ad_id" = $1`, adId).Scan(&uploadedAt); err != nil {
+	if err := pdb.db.QueryRowContext(ctx, `SELECT "uploaded_at" FROM "uploaded_ad" WHERE "uploaded_ad_id" = $1`, uploadedAdId).Scan(&uploadedAt); err != nil {
 		return time.Time{}, err
 	}
 
