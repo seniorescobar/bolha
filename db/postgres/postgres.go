@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -246,7 +247,7 @@ func (pdb *PostgresDB) addImage(ctx context.Context, tx *sql.Tx, adId int64, loc
 
 // AddUploadedAd inserts a pair of (ad_id, uploaded_ad_id) into uploaded_ad table
 func (pdb *PostgresDB) AddUploadedAd(ctx context.Context, adId, uploadedAdId int64) error {
-	if _, err := pdb.db.ExecContext(ctx, `INSERT INTO "uploaded_ad"("ad_id", "uploaded_ad_id") VALUES($1, $2)`, adId, uploadedAdId); err != nil {
+	if _, err := pdb.db.ExecContext(ctx, `INSERT INTO "uploaded_ad"("ad_id", "uploaded_ad_id", "uploaded_at") VALUES($1, $2, NOW()::timestamp)`, adId, uploadedAdId); err != nil {
 		return err
 	}
 
@@ -260,6 +261,15 @@ func (pdb *PostgresDB) RemoveUploadedAd(ctx context.Context, uploadedAdId int64)
 	}
 
 	return nil
+}
+
+func (pdb *PostgresDB) GetUploadedAt(ctx context.Context, adId int64) (time.Time, error) {
+	var uploadedAt time.Time
+	if err := pdb.db.QueryRowContext(ctx, `SELECT "uploaded_at" FROM "uploaded_ad" WHERE "ad_id" = $1)`, adId).Scan(&uploadedAt); err != nil {
+		return time.Time{}, err
+	}
+
+	return uploadedAt, nil
 }
 
 // Close closes connection to database
