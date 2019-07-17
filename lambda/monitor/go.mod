@@ -6,11 +6,11 @@ require (
 	github.com/aws/aws-lambda-go v1.11.1
 	github.com/aws/aws-sdk-go v1.20.20
 	github.com/lib/pq v1.1.1 // indirect
-	github.com/seniorescobar/bolha v0.0.0-20190715143847-3ff2e3710dfa
-	github.com/seniorescobar/bolha/client v0.0.0-20190715143847-3ff2e3710dfa
-	github.com/seniorescobar/bolha/lambda/common v0.0.0-20190715143847-3ff2e3710dfa
+	github.com/seniorescobar/bolha v0.0.0-20190715223011-9eaab4e77b09
+	github.com/seniorescobar/bolha/client v0.0.0-20190715223011-9eaab4e77b09
+	github.com/seniorescobar/bolha/lambda/common v0.0.0-20190715223011-9eaab4e77b09
 	github.com/sirupsen/logrus v1.4.2
 	golang.org/x/net v0.0.0-20190628185345-da137c7871d7 // indirect
 	golang.org/x/text v0.3.2 // indirect
-	golang.org/x/tools v0.0.0-20190715044752-607ca053a137 // indirect
+	golang.org/x/tools v0.0.0-20190715221914-9b2cb0e5f602 // indirect
 )

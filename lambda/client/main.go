@@ -6,29 +6,28 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"time"
+
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 
 	"github.com/seniorescobar/bolha/client"
-	"github.com/seniorescobar/bolha/db/postgres"
 	"github.com/seniorescobar/bolha/lambda/common"
 )
 
 func Handler(ctx context.Context, event events.SQSEvent) error {
-	pdb, err := postgres.NewFromEnv()
-	if err != nil {
-		return err
-	}
-	defer pdb.Close()
-
 	sess := session.Must(session.NewSession())
 
 	sqsClient, err := common.NewSQSClient(sess)
 	if err != nil {
 		return err
 	}
+
+	ddb := dynamodb.New(sess)
 
 	for _, record := range event.Records {
 		var action, username, password string
@@ -38,6 +37,7 @@ func Handler(ctx context.Context, event events.SQSEvent) error {
 			"password": &password,
 		})
 
+		// TODO add session id option
 		c, err := client.New(&client.User{
 			Username: username,
 			Password: password,
@@ -55,6 +55,7 @@ func Handler(ctx context.Context, event events.SQSEvent) error {
 
 			s3Client := common.NewS3Client(sess)
 
+			// TODO add concurrency
 			images := make([]io.Reader, len(ad.Images))
 			for i, imgPath := range ad.Images {
 				img, err := s3Client.DownloadImage(imgPath)
@@ -76,7 +77,25 @@ func Handler(ctx context.Context, event events.SQSEvent) error {
 				return err
 			}
 
-			if err := pdb.AddUploadedAd(ctx, ad.Id, uploadedAdId); err != nil {
+			input := &dynamodb.UpdateItemInput{
+				ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+					":uploadedId": {
+						N: aws.String(strconv.FormatInt(uploadedAdId, 10)),
+					},
+					":uploadedAt": {
+						S: aws.String(time.Now().Format(time.RFC3339)),
+					},
+				},
+				Key: map[string]*dynamodb.AttributeValue{
+					"AdTitle": {
+						S: aws.String(ad.Title),
+					},
+				},
+				TableName:        aws.String("Bolha"),
+				UpdateExpression: aws.String("SET AdUploadedId = :uploadedId, AdUploadedAt = :uploadedAt"),
+			}
+
+			if _, err := ddb.UpdateItem(input); err != nil {
 				return err
 			}
 
@@ -92,9 +111,9 @@ func Handler(ctx context.Context, event events.SQSEvent) error {
 				return err
 			}
 
-			if err := pdb.RemoveUploadedAd(ctx, uploadedAdId); err != nil {
-				return err
-			}
+			// if err := pdb.RemoveUploadedAd(ctx, uploadedAdId); err != nil {
+			// 	return err
+			// }
 
 			sqsClient.DeleteMessage(record.ReceiptHandle)
 		}
