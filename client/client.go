@@ -1,10 +1,15 @@
 package client
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"time"
+)
+
+var (
+	ErrAdNotFound = errors.New("ad not found")
 )
 
 // Record represents a record consisting of user and ads

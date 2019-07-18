@@ -289,6 +289,10 @@ func (c *Client) getActiveAd(id int64) (*ActiveAd, error) {
 
 	m := r.FindSubmatch(body)
 
+	if len(m) == 0 {
+		return nil, ErrAdNotFound
+	}
+
 	orderI, err := strconv.ParseInt(string(m[1]), 10, 32)
 	if err != nil {
 		return nil, err
